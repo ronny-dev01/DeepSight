@@ -1,0 +1,164 @@
+﻿#root {
+    min-height: 100vh;
+}
+
+.app-shell {
+    min-height: 100vh;
+    background: #f6f8fb;
+    color: #1f2937;
+}
+
+.government-header {
+    background: #fffdf8;
+    border-top: 1px solid #d7d7d7;
+    border-bottom: 3px solid #ef8c2f;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.government-header__inner {
+    min-height: 82px;
+    width: min(100%, 1440px);
+    margin: 0 auto;
+    padding: 10px 30px;
+    box-sizing: border-box;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.government-header__brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.government-header__icon {
+    width: 54px;
+    height: 54px;
+    flex: 0 0 54px;
+
+    display: grid;
+    place-items: center;
+
+    border: 1px solid #dfc69c;
+    border-radius: 50%;
+    background: #fffaf2;
+    box-shadow: 0 2px 7px rgba(80, 50, 20, 0.1);
+}
+
+.government-header__emblem {
+    width: 47px;
+    height: 47px;
+}
+
+.government-header__text h1 {
+    margin: 0;
+
+    color: #7f2f19;
+    font-size: clamp(18px, 2vw, 25px);
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+}
+
+.government-header__text p {
+    margin: 5px 0 0;
+
+    color: #c65d25;
+    font-size: 13px;
+    line-height: 1.2;
+    font-weight: 500;
+}
+
+.government-header__badge {
+    padding: 6px 11px;
+
+    border: 1px solid #efc99f;
+    border-radius: 999px;
+
+    color: #8b3c20;
+    background: #fff7ed;
+
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+
+.app-content {
+    width: min(100%, 1440px);
+    margin: 0 auto;
+    padding: 32px 30px;
+    box-sizing: border-box;
+}
+
+.welcome-panel {
+    padding: 30px;
+    border: 1px solid #dfe4ea;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+}
+
+.welcome-eyebrow {
+    margin: 0 0 8px;
+
+    color: #a85c1d;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+}
+
+.welcome-panel h2 {
+    margin: 0;
+    color: #152238;
+    font-size: 30px;
+    line-height: 1.2;
+}
+
+.welcome-panel p:last-child {
+    margin: 12px 0 0;
+    color: #667085;
+    font-size: 15px;
+}
+
+@media (max-width: 700px) {
+    .government-header__inner {
+        min-height: 76px;
+        padding: 9px 16px;
+    }
+
+    .government-header__brand {
+        gap: 12px;
+    }
+
+    .government-header__icon {
+        width: 46px;
+        height: 46px;
+        flex-basis: 46px;
+    }
+
+    .government-header__emblem {
+        width: 40px;
+        height: 40px;
+    }
+
+    .government-header__text h1 {
+        font-size: 17px;
+    }
+
+    .government-header__text p {
+        margin-top: 3px;
+        font-size: 11px;
+    }
+
+    .government-header__badge {
+        display: none;
+    }
+
+    .app-content {
+        padding: 20px 16px;
+    }
+}

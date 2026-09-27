@@ -1,0 +1,400 @@
+﻿.dashboard {
+    width: min(100%, 1440px);
+    margin: 0 auto;
+    padding: 28px 30px 50px;
+}
+
+.dashboard-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.summary-card {
+    padding: 20px;
+    border: 1px solid #dfe4ea;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
+}
+
+.summary-card span {
+    display: block;
+    margin-bottom: 8px;
+    color: #667085;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.summary-card strong {
+    color: #142033;
+    font-size: 28px;
+    line-height: 1;
+}
+
+.summary-status {
+    text-transform: capitalize;
+}
+
+.dashboard-panel {
+    margin-bottom: 22px;
+    border: 1px solid #dfe4ea;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+
+.panel-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px 24px 20px;
+    border-bottom: 1px solid #eef1f4;
+}
+
+.panel-eyebrow {
+    color: #a85c1d;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+}
+
+.panel-heading h2 {
+    margin: 4px 0 5px;
+    color: #152238;
+    font-size: 24px;
+}
+
+.panel-heading p {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+}
+
+.refresh-button,
+.review-button {
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.refresh-button {
+    padding: 9px 15px;
+    color: #7f2f19;
+    background: #fff4e9;
+    border: 1px solid #efc99f;
+}
+
+.refresh-button:hover {
+    background: #ffecd8;
+}
+
+.jobs-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.jobs-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+.jobs-table th,
+.jobs-table td {
+    padding: 14px 16px;
+    text-align: left;
+    border-bottom: 1px solid #eef1f4;
+    font-size: 13px;
+}
+
+.jobs-table th {
+    color: #667085;
+    background: #fafbfc;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.jobs-table td {
+    color: #344054;
+}
+
+.table-empty,
+.review-empty {
+    padding: 35px;
+    text-align: center;
+    color: #667085;
+}
+
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.status-succeeded {
+    color: #137333;
+    background: #e9f8ed;
+}
+
+.status-running {
+    color: #175cd3;
+    background: #eff8ff;
+}
+
+.status-queued {
+    color: #9b5c00;
+    background: #fff7e6;
+}
+
+.status-failed {
+    color: #b42318;
+    background: #fef3f2;
+}
+
+.status-unknown {
+    color: #475467;
+    background: #f2f4f7;
+}
+
+.review-count {
+    padding: 7px 11px;
+    border: 1px solid #e6e9ed;
+    border-radius: 999px;
+    color: #475467;
+    background: #f8fafc;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.review-list {
+    display: grid;
+    gap: 18px;
+    padding: 20px;
+}
+
+.review-card {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 20px;
+    padding: 16px;
+    border: 1px solid #e3e7ec;
+    border-radius: 12px;
+    background: #fbfcfe;
+}
+
+.review-card__image {
+    min-height: 220px;
+    overflow: hidden;
+    border: 1px solid #dfe4ea;
+    border-radius: 10px;
+    background: #111827;
+}
+
+.review-card__image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-height: 220px;
+    object-fit: contain;
+}
+
+.review-card__content {
+    min-width: 0;
+}
+
+.review-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.review-label {
+    color: #667085;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+}
+
+.review-card__header h3 {
+    margin: 4px 0 0;
+    color: #152238;
+    font-size: 22px;
+}
+
+.review-confidence {
+    padding: 7px 10px;
+    border-radius: 8px;
+    color: #175cd3;
+    background: #eff8ff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.review-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.review-grid div {
+    padding: 11px;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.review-grid span {
+    display: block;
+    color: #667085;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.review-grid strong {
+    display: block;
+    margin-top: 4px;
+    color: #344054;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+.review-source {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 16px;
+    color: #667085;
+    font-size: 12px;
+}
+
+.review-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.review-button {
+    min-width: 110px;
+    padding: 10px 16px;
+}
+
+.review-button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.review-button--accept {
+    color: #ffffff;
+    background: #178344;
+}
+
+.review-button--accept:hover:not(:disabled) {
+    background: #126b37;
+}
+
+.review-button--reject {
+    color: #b42318;
+    background: #ffffff;
+    border: 1px solid #f0b7b2;
+}
+
+.review-button--reject:hover:not(:disabled) {
+    background: #fef3f2;
+}
+
+.dashboard-error,
+.review-error {
+    margin-bottom: 22px;
+    padding: 12px 14px;
+    border: 1px solid #f0b7b2;
+    border-radius: 9px;
+    color: #b42318;
+    background: #fef3f2;
+    font-size: 13px;
+}
+
+.dashboard-error {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+@media (max-width: 1000px) {
+    .dashboard-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .review-card {
+        grid-template-columns: 1fr;
+    }
+
+    .review-card__image,
+    .review-card__image img {
+        min-height: 280px;
+    }
+}
+
+@media (max-width: 700px) {
+    .dashboard {
+        padding: 20px 16px 35px;
+    }
+
+    .dashboard-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-heading {
+        flex-direction: column;
+        padding: 20px;
+    }
+
+    .review-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .review-list {
+        padding: 14px;
+    }
+
+    .review-card {
+        padding: 12px;
+    }
+
+    .review-actions {
+        flex-direction: column;
+    }
+
+    .review-button {
+        width: 100%;
+    }
+}
+.jobs-table tbody tr.job-row-clickable {
+    cursor: pointer;
+}
+
+.jobs-table tbody tr.job-row-clickable:hover {
+    background: #f8fafc;
+}
+
+.jobs-table tbody tr.job-row-clickable:focus-visible {
+    outline: 2px solid #a85c1d;
+    outline-offset: -2px;
+}

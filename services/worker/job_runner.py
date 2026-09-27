@@ -9,6 +9,7 @@ from services.api.db import SessionLocal
 from services.api.models import (
     AcousticEvidence,
     Detection,
+    DetectionReview,
     IngestionJob,
     SonarFrame,
 )
@@ -229,6 +230,13 @@ def process_ingestion_job(
                         interpretation=(
                             fusion.interpretation
                         ),
+                    )
+                )
+
+                db.add(
+                    DetectionReview(
+                        detection_id=stored_detection.id,
+                        decision="pending",
                     )
                 )
 

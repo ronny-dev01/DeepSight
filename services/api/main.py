@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from services.api.config import settings
 from services.api.routes.health import router as health_router
 from services.api.routes.ingestion import router as ingestion_router
+from services.api.routes.review import router as review_router
 
 
 app = FastAPI(
@@ -16,6 +17,7 @@ app = FastAPI(
 
 app.include_router(health_router)
 app.include_router(ingestion_router)
+app.include_router(review_router)
 
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
 

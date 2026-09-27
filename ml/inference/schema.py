@@ -27,6 +27,7 @@ class Detection:
 class DetectionResult:
     model_path: str
     model_name: str
+    model_version: str
     image_width: int
     image_height: int
     inference_ms: float
@@ -36,6 +37,7 @@ class DetectionResult:
         return {
             "model_path": self.model_path,
             "model_name": self.model_name,
+            "model_version": self.model_version,
             "image_width": self.image_width,
             "image_height": self.image_height,
             "inference_ms": round(self.inference_ms, 3),

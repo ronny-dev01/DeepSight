@@ -42,3 +42,7 @@ Thumbs.db
 
 # Ultralytics generated artifacts
 /runs/
+
+# Local Ultralytics training artifacts
+/weights/
+/yolo11s.pt

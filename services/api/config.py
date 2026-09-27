@@ -17,6 +17,17 @@ class Settings(BaseSettings):
     model_name: str = "gv-yolo12"
     model_version: str = "initial"
     model_path: str = "ml/models/gv-yolo12/weights.onnx"
+    model_device: str = "cpu"
+    model_confidence: float = 0.25
+    model_iou: float = 0.45
+    model_image_size: int = 640
+    model_tiling_enabled: bool = False
+    model_tile_size: int = 384
+    model_tile_stride: int = 256
+    model_tile_iou: float = 0.70
+    model_tile_nms_iou: float = 0.50
+    model_registry_path: str = "ml/models/model_registry.json"
+    model_verify_hash: bool = True
 
     api_host: str = "127.0.0.1"
     api_port: int = 8000

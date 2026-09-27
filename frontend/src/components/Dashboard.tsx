@@ -121,6 +121,103 @@ function ReviewCard({
                     </div>
                 </div>
 
+                <section className="review-evidence" aria-label="Detection evidence">
+                    <div className="review-evidence__header">
+                        <div>
+                            <span className="review-evidence__eyebrow">
+                                EXPLAINABLE EVIDENCE
+                            </span>
+
+                            <h4>Evidence analysis</h4>
+                        </div>
+
+                        <span className="review-evidence__availability">
+                            {review.evidence_available
+                                ? "Evidence available"
+                                : "Evidence unavailable"}
+                        </span>
+                    </div>
+
+                    <div className="review-evidence__summary">
+                        <div>
+                            <span>Heuristic evidence index</span>
+                            <strong>
+                                {review.evidence_index !== null
+                                    ? review.evidence_index.toFixed(3)
+                                    : "N/A"}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Interpretation</span>
+                            <strong>
+                                {review.interpretation
+                                    ? review.interpretation.replaceAll("_", " ")
+                                    : "N/A"}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Shadow direction</span>
+                            <strong>
+                                {review.shadow_candidate_direction ?? "N/A"}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Physical direction</span>
+                            <strong>
+                                {review.physical_shadow_direction_available
+                                    ? "Available"
+                                    : "Unavailable"}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <div className="review-evidence__signals">
+                        <div>
+                            <span>Intensity contrast</span>
+                            <strong>
+                                {review.intensity_contrast !== null
+                                    ? review.intensity_contrast.toFixed(3)
+                                    : "N/A"}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Edge density</span>
+                            <strong>
+                                {review.edge_density !== null
+                                    ? review.edge_density.toFixed(3)
+                                    : "N/A"}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Shape compactness</span>
+                            <strong>
+                                {review.shape_compactness !== null
+                                    ? review.shape_compactness.toFixed(3)
+                                    : "N/A"}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Shadow support</span>
+                            <strong>
+                                {review.shadow_candidate_score !== null
+                                    ? review.shadow_candidate_score.toFixed(3)
+                                    : "N/A"}
+                            </strong>
+                        </div>
+                    </div>
+
+                    <p className="review-evidence__note">
+                        The heuristic evidence index is an engineering signal for review support,
+                        not a probability of object identity.
+                    </p>
+                </section>
+
                 <div className="review-source">
                     <span>
                         Source: {review.source_id}

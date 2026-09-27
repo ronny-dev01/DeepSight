@@ -1,0 +1,229 @@
+﻿.upload-panel {
+    margin-bottom: 22px;
+    border: 1px solid #dfe4ea;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 8px 25px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+}
+
+.upload-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px;
+    border-bottom: 1px solid #eef1f4;
+}
+
+.upload-panel__eyebrow {
+    color: #a85c1d;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.3px;
+}
+
+.upload-panel__header h2 {
+    margin: 4px 0 5px;
+    color: #152238;
+    font-size: 24px;
+}
+
+.upload-panel__header p {
+    margin: 0;
+    color: #667085;
+    font-size: 14px;
+}
+
+.upload-panel__limit {
+    padding: 7px 11px;
+    border: 1px solid #e6e9ed;
+    border-radius: 999px;
+    color: #475467;
+    background: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.upload-panel__form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    padding: 22px 24px;
+}
+
+.upload-panel__form label {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.upload-panel__form label > span {
+    color: #344054;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.upload-panel__form input[type="text"] {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #dfe4ea;
+    border-radius: 8px;
+    color: #152238;
+    background: #ffffff;
+    outline: none;
+    font: inherit;
+    font-size: 13px;
+}
+
+.upload-panel__form input[type="text"]:focus {
+    border-color: #c27b3c;
+    box-shadow: 0 0 0 3px rgba(194, 123, 60, 0.12);
+}
+
+.upload-panel__file-field {
+    grid-column: 1 / -1;
+}
+
+.upload-panel__file-field input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px dashed #cfd5dc;
+    border-radius: 9px;
+    background: #fafbfc;
+    color: #475467;
+    font: inherit;
+    font-size: 12px;
+}
+
+.upload-panel__file-field small {
+    color: #667085;
+    font-size: 11px;
+}
+
+.upload-panel__selection {
+    margin: 0 24px 18px;
+    padding: 14px;
+    border: 1px solid #e3e7ec;
+    border-radius: 10px;
+    background: #fbfcfe;
+}
+
+.upload-panel__selection > div:first-child {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.upload-panel__selection strong {
+    color: #344054;
+    font-size: 12px;
+}
+
+.upload-panel__selection span {
+    color: #667085;
+    font-size: 12px;
+}
+
+.upload-panel__files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.upload-panel__files span {
+    padding: 5px 8px;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    background: #ffffff;
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.upload-panel__error,
+.upload-panel__success {
+    margin: 0 24px 18px;
+    padding: 12px 14px;
+    border-radius: 9px;
+    font-size: 12px;
+}
+
+.upload-panel__error {
+    border: 1px solid #f0b7b2;
+    color: #b42318;
+    background: #fef3f2;
+}
+
+.upload-panel__success {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border: 1px solid #b7dfc3;
+    color: #137333;
+    background: #e9f8ed;
+}
+
+.upload-panel__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 24px;
+    border-top: 1px solid #eef1f4;
+    background: #fafbfc;
+}
+
+.upload-panel__footer > span {
+    color: #667085;
+    font-size: 11px;
+}
+
+.upload-panel__footer button {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    color: #ffffff;
+    background: #8d3b22;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.upload-panel__footer button:hover:not(:disabled) {
+    background: #742f1b;
+}
+
+.upload-panel__footer button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+@media (max-width: 750px) {
+    .upload-panel__header {
+        flex-direction: column;
+    }
+
+    .upload-panel__form {
+        grid-template-columns: 1fr;
+        padding: 18px;
+    }
+
+    .upload-panel__file-field {
+        grid-column: auto;
+    }
+
+    .upload-panel__selection,
+    .upload-panel__error,
+    .upload-panel__success {
+        margin-left: 18px;
+        margin-right: 18px;
+    }
+
+    .upload-panel__footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

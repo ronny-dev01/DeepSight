@@ -238,6 +238,12 @@ class Detection(Base):
         nullable=True,
     )
 
+    review: Mapped["DetectionReview | None"] = relationship(
+        back_populates="detection",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
 
 class AcousticEvidence(Base):
     __tablename__ = "acoustic_evidence"
@@ -313,6 +319,52 @@ class AcousticEvidence(Base):
 
     detection: Mapped["Detection"] = relationship(
         back_populates="evidence",
+    )
+
+
+class DetectionReview(Base):
+    __tablename__ = "detection_reviews"
+
+    __table_args__ = (
+        CheckConstraint(
+            "decision IN ('pending', 'accepted', 'rejected')",
+            name="ck_detection_reviews_decision",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    detection_id: Mapped[int] = mapped_column(
+        ForeignKey("detections.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+
+    decision: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="pending",
+        server_default="pending",
+    )
+
+    note: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    detection: Mapped["Detection"] = relationship(
+        back_populates="review",
     )
 
 

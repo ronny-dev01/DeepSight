@@ -92,6 +92,7 @@ def process_ingestion_job(
                 "Job contains a non-SSS frame"
             )
 
+        pipeline = _get_pipeline()
         job.status = "running"
         job.started_at = _utcnow()
         job.error_message = None
@@ -100,8 +101,6 @@ def process_ingestion_job(
         job.model_version = pipeline.detector.model_version
 
         db.commit()
-
-        pipeline = _get_pipeline()
 
         frames_processed = 0
         detections_total = 0

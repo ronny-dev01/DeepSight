@@ -4,6 +4,7 @@ from time import perf_counter
 
 from sqlalchemy import select
 
+from ml.tracking import DeterministicTracker, TrackDetection
 from services.api.config import settings
 from services.api.db import SessionLocal
 from services.api.models import (
@@ -12,6 +13,7 @@ from services.api.models import (
     DetectionReview,
     IngestionJob,
     SonarFrame,
+    Track,
 )
 from services.worker.pipeline import SSSFramePipeline
 
@@ -108,6 +110,10 @@ def process_ingestion_job(
         total_preprocessing_ms = 0.0
         total_evidence_ms = 0.0
         total_processing_ms = 0.0
+        total_tracking_ms = 0.0
+
+        tracker = DeterministicTracker()
+        db_track_ids: dict[int, int] = {}
 
         for frame in frames:
             image_path = (
@@ -147,6 +153,34 @@ def process_ingestion_job(
                 result.detection_result
             )
 
+            tracking_detections: list[TrackDetection] = []
+
+            if detection_result is not None:
+                tracking_detections = [
+                    TrackDetection(
+                        frame_index=frame.frame_index,
+                        detection_index=detection_index,
+                        class_id=detection.class_id,
+                        class_name=detection.class_name,
+                        confidence=detection.confidence,
+                        bbox_xyxy=detection.bbox_xyxy,
+                    )
+                    for detection_index, detection in enumerate(
+                        detection_result.detections
+                    )
+                ]
+
+            tracking_started = perf_counter()
+
+            tracker.update(
+                frame.frame_index,
+                tracking_detections,
+            )
+
+            total_tracking_ms += (
+                perf_counter() - tracking_started
+            ) * 1000.0
+
             if detection_result is None:
                 continue
 
@@ -158,11 +192,95 @@ def process_ingestion_job(
                 detection_result.detections
             )
 
+            current_track_by_detection_index: dict[
+                int,
+                int,
+            ] = {}
+
+            for candidate_track in tracker.tracks():
+                for track_detection in candidate_track.detections:
+                    if (
+                        track_detection.frame_index
+                        == frame.frame_index
+                    ):
+                        current_track_by_detection_index[
+                            track_detection.detection_index
+                        ] = candidate_track.track_id
+
+                db_track_id = db_track_ids.get(
+                    candidate_track.track_id
+                )
+
+                if db_track_id is None:
+                    stored_track = Track(
+                        sequence_id=frame.sequence_id,
+                        class_name=candidate_track.dominant_class,
+                        first_frame=candidate_track.first_frame,
+                        last_frame=candidate_track.last_frame,
+                        detection_count=candidate_track.detection_count,
+                        mean_confidence=candidate_track.mean_confidence,
+                        max_confidence=candidate_track.max_confidence,
+                        persistence_score=candidate_track.persistence_score,
+                    )
+                    db.add(stored_track)
+                    db.flush()
+
+                    db_track_ids[
+                        candidate_track.track_id
+                    ] = stored_track.id
+                else:
+                    stored_track = db.get(
+                        Track,
+                        db_track_id,
+                    )
+
+                    if stored_track is None:
+                        raise ValueError(
+                            "Persisted tracking state is missing "
+                            f"for logical track {candidate_track.track_id}"
+                        )
+
+                    stored_track.class_name = (
+                        candidate_track.dominant_class
+                    )
+                    stored_track.first_frame = (
+                        candidate_track.first_frame
+                    )
+                    stored_track.last_frame = (
+                        candidate_track.last_frame
+                    )
+                    stored_track.detection_count = (
+                        candidate_track.detection_count
+                    )
+                    stored_track.mean_confidence = (
+                        candidate_track.mean_confidence
+                    )
+                    stored_track.max_confidence = (
+                        candidate_track.max_confidence
+                    )
+                    stored_track.persistence_score = (
+                        candidate_track.persistence_score
+                    )
+
             for detection_index, detection in enumerate(
                 detection_result.detections
             ):
+                logical_track_id = (
+                    current_track_by_detection_index.get(
+                        detection_index
+                    )
+                )
+
+                if logical_track_id is None:
+                    raise ValueError(
+                        "Tracker did not assign a track to "
+                        f"frame {frame.frame_index}, "
+                        f"detection {detection_index}"
+                    )
+
                 stored_detection = Detection(
                     frame_id=frame.id,
+                    track_id=db_track_ids[logical_track_id],
                     class_name=detection.class_name,
                     class_id=detection.class_id,
                     confidence=detection.confidence,
@@ -249,7 +367,9 @@ def process_ingestion_job(
         job.evidence_ms = (
             total_evidence_ms
         )
-        job.tracking_ms = None
+        job.tracking_ms = (
+            total_tracking_ms
+        )
 
         job.status = "succeeded"
         job.completed_at = _utcnow()

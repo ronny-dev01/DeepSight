@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "active_model": "ghostvision-crab-pot-custom",
+  "models": [
+    {
+      "name": "ghostvision-crab-pot-custom",
+      "version": "full-25ep-640cpu-7be9ebfb",
+      "artifact": "storage/runs/crab_pot_full/weights/best.pt",
+      "artifact_sha256": "7BE9EBFB23CCA3F2CFF5E08B327E717EAE46F9C1DB1DE2FC1632EF8CC6771087",
+      "task": "object-detection",
+      "classes": {
+        "0": "Crab-Pot"
+      },
+      "input_size": 640,
+      "training": {
+        "base_model": "yolo11n",
+        "dataset": "data/derived/ghostvision_yolo/dataset.yaml",
+        "epochs": 25,
+        "batch": 4,
+        "device": "cpu",
+        "pretrained": true,
+        "seed": 0,
+        "deterministic": true
+      },
+      "validation": {
+        "best_observed_precision": 0.57795,
+        "best_observed_recall": 0.47057,
+        "best_observed_map50": 0.46724,
+        "best_observed_map50_95": 0.16194,
+        "source": "storage/runs/crab_pot_full/results.csv"
+      },
+      "test": {
+        "images": 398,
+        "instances": 567,
+        "precision": 0.238,
+        "recall": 0.441,
+        "map50": 0.253,
+        "map50_95": 0.1
+      }
+    },
+    {
+      "name": "gv-yolo12",
+      "version": "ghostvision-packaged-v5",
+      "artifact": "ml/models/gv-yolo12/weights.onnx",
+      "artifact_sha256": "A5F76FEFF2CA683C4FF4738C3B27AC979489D8AD92E81373301FF1646D93F998",
+      "task": "object-detection",
+      "architecture": "yolov12s",
+      "input_size": 640,
+      "classes": {
+        "0": "Crab-Pot"
+      },
+      "source": {
+        "dataset_id": "rx5YMJ3d3GZMFobFJf3Y",
+        "dataset_version": "5",
+        "maybe_pot_omitted": true
+      },
+      "test": {
+        "images": 398,
+        "instances": 567,
+        "precision": 0.337,
+        "recall": 0.376,
+        "map50": 0.298,
+        "map50_95": 0.118
+      }
+    }
+  ]
+}

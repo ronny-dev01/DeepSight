@@ -95,8 +95,8 @@ def process_ingestion_job(
         job.started_at = _utcnow()
         job.error_message = None
         job.pipeline_version = PIPELINE_VERSION
-        job.model_name = settings.model_name
-        job.model_version = settings.model_version
+        job.model_name = pipeline.detector.model_name
+        job.model_version = pipeline.detector.model_version
 
         db.commit()
 
@@ -173,8 +173,8 @@ def process_ingestion_job(
                     inference_ms=(
                         detection_result.inference_ms
                     ),
-                    model_name=settings.model_name,
-                    model_version=settings.model_version,
+                    model_name=detection_result.model_name,
+                    model_version=detection_result.model_version,
                 )
 
                 db.add(stored_detection)

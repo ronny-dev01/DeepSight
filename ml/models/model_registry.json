@@ -4,38 +4,41 @@
   "models": [
     {
       "name": "ghostvision-crab-pot-custom",
-      "version": "full-25ep-640cpu-7be9ebfb",
-      "artifact": "storage/runs/crab_pot_full/weights/best.pt",
-      "artifact_sha256": "7BE9EBFB23CCA3F2CFF5E08B327E717EAE46F9C1DB1DE2FC1632EF8CC6771087",
+      "version": "v5-hardneg-epoch9-640-6caf0930",
+      "artifact": "storage/runs/crab_pot_v5_finetune_hardneg/weights/best.pt",
+      "artifact_sha256": "6CAF0930B1A0BD833992E44339FB18B97E803AEC9BDBF1601889C4D89723BCD6",
       "task": "object-detection",
+      "architecture": "yolo11n",
       "classes": {
         "0": "Crab-Pot"
       },
       "input_size": 640,
       "training": {
         "base_model": "yolo11n",
-        "dataset": "data/derived/ghostvision_yolo/dataset.yaml",
-        "epochs": 25,
-        "batch": 4,
-        "device": "cpu",
+        "dataset": "data/derived/ghostvision_yolo_v5.yaml",
+        "epochs": 20,
+        "batch": 16,
+        "device": 0,
         "pretrained": true,
         "seed": 0,
-        "deterministic": true
+        "deterministic": true,
+        "optimizer": "AdamW",
+        "best_epoch": 9
       },
       "validation": {
-        "best_observed_precision": 0.57795,
-        "best_observed_recall": 0.47057,
-        "best_observed_map50": 0.46724,
-        "best_observed_map50_95": 0.16194,
-        "source": "storage/runs/crab_pot_full/results.csv"
+        "best_observed_precision": 0.58602,
+        "best_observed_recall": 0.50353,
+        "best_observed_map50": 0.50096,
+        "best_observed_map50_95": 0.17023,
+        "source": "storage/runs/crab_pot_v5_finetune_hardneg/results.csv"
       },
       "test": {
         "images": 398,
         "instances": 567,
-        "precision": 0.238,
-        "recall": 0.441,
-        "map50": 0.253,
-        "map50_95": 0.1
+        "precision": 0.44775371218429216,
+        "recall": 0.4074074074074074,
+        "map50": 0.37390144003182013,
+        "map50_95": 0.1487427666846582
       }
     },
     {

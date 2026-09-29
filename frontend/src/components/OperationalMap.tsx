@@ -44,7 +44,7 @@ export default function OperationalMap({
                     <h3>Detection Locations</h3>
 
                     <p>
-                        Only verified coordinates from persisted
+                        Only usable coordinates from persisted
                         sonar metadata are plotted.
                     </p>
                 </div>

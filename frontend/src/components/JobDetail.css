@@ -1,4 +1,4 @@
-﻿.job-detail {
+.job-detail {
     margin-bottom: 22px;
     border: 1px solid #dfe4ea;
     border-radius: 14px;
@@ -48,6 +48,53 @@
 
 .job-detail__close:hover {
     background: #f8fafc;
+}
+
+.job-detail__header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.job-detail__report {
+    padding: 9px 14px;
+    border: 1px solid #d98a3a;
+    border-radius: 8px;
+    color: #8a4b12;
+    background: #fffaf4;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.job-detail__report:hover {
+    background: #fff3e6;
+}
+
+.job-detail__report:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.job-detail__report-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 24px;
+    color: #9b2c2c;
+    background: #fef3f2;
+    border-bottom: 1px solid #f7d5d1;
+    font-size: 13px;
+}
+
+.job-detail__report-error strong {
+    flex-shrink: 0;
+}
+
+.job-detail__report-error span {
+    overflow-wrap: anywhere;
 }
 
 .job-detail__metrics {
@@ -274,6 +321,11 @@
 @media (max-width: 750px) {
     .job-detail__header {
         flex-direction: column;
+    }
+
+    .job-detail__header-actions {
+        width: 100%;
+        justify-content: flex-start;
     }
 
     .job-detail__metrics,

@@ -3,6 +3,7 @@
     DetectionReviewListResponse,
     DetectionReviewUpdate,
     IngestionJobListResponse,
+    IngestionJobResponse,
     IngestionJobStatus,
 } from "../types/api"
 
@@ -129,7 +130,14 @@ export async function getJobReviews(
         `/reviews/job/${jobId}?page=${page}&page_size=${pageSize}`,
     )
 }
-import type { IngestionJobResponse } from "../types/api"
+
+export async function getJobReport(
+    jobId: number,
+): Promise<Record<string, unknown>> {
+    return requestJson<Record<string, unknown>>(
+        `/reports/jobs/${jobId}`,
+    )
+}
 
 export interface CreateIngestionJobInput {
     sourceId: string

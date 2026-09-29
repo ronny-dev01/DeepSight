@@ -39,6 +39,7 @@ def _get_pipeline() -> SSSFramePipeline:
 
 def process_ingestion_job(
     job_id: int,
+    already_claimed: bool = False,
 ) -> dict[str, int | float | str]:
     db = SessionLocal()
 
@@ -55,7 +56,15 @@ def process_ingestion_job(
                 f"Unsupported ingestion modality: {job.modality}"
             )
 
-        if job.status != "queued":
+        if already_claimed:
+            if job.status != "running":
+                return {
+                    "job_id": job.id,
+                    "status": job.status,
+                    "frames_processed": 0,
+                    "detections_total": 0,
+                }
+        elif job.status != "queued":
             return {
                 "job_id": job.id,
                 "status": job.status,
@@ -95,7 +104,8 @@ def process_ingestion_job(
             )
 
         pipeline = _get_pipeline()
-        job.status = "running"
+        if not already_claimed:
+            job.status = "running"
         job.started_at = _utcnow()
         job.error_message = None
         job.pipeline_version = PIPELINE_VERSION

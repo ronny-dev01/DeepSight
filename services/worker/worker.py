@@ -1,7 +1,7 @@
 import logging
 import time
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from services.api.db import SessionLocal
 from services.api.models import IngestionJob
@@ -31,7 +31,10 @@ def get_next_queued_job_id() -> int | None:
                 IngestionJob.id == queued_job_id,
                 IngestionJob.status == "queued",
             )
-            .values(status="running")
+            .values(
+                status="running",
+                started_at=func.now(),
+            )
             .returning(IngestionJob.id)
         )
 

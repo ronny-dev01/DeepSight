@@ -1,7 +1,7 @@
 import logging
 import time
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from services.api.db import SessionLocal
 from services.api.models import IngestionJob
@@ -17,12 +17,35 @@ def get_next_queued_job_id() -> int | None:
     db = SessionLocal()
 
     try:
-        return db.scalar(
+        queued_job_id = (
             select(IngestionJob.id)
             .where(IngestionJob.status == "queued")
             .order_by(IngestionJob.id)
             .limit(1)
+            .scalar_subquery()
         )
+
+        result = db.execute(
+            update(IngestionJob)
+            .where(
+                IngestionJob.id == queued_job_id,
+                IngestionJob.status == "queued",
+            )
+            .values(status="running")
+            .returning(IngestionJob.id)
+        )
+
+        job_id = result.scalar_one_or_none()
+
+        if job_id is None:
+            db.rollback()
+            return None
+
+        db.commit()
+        return job_id
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()
 
@@ -40,7 +63,7 @@ def run_worker() -> None:
         logger.info("Processing ingestion job %s", job_id)
 
         try:
-            process_ingestion_job(job_id)
+            process_ingestion_job(job_id, already_claimed=True)
         except Exception:
             logger.exception("Ingestion job %s failed", job_id)
 

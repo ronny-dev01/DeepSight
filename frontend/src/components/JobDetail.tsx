@@ -2,6 +2,7 @@
 
 import {
     getIngestionJob,
+    getJobReport,
     getJobReviews,
     getReviewImageUrl,
 } from "../api/client"
@@ -261,7 +262,9 @@ export default function JobDetail({
         useState<DetectionReview[]>([])
 
     const [loading, setLoading] = useState(true)
+    const [reportLoading, setReportLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [reportError, setReportError] = useState<string | null>(null)
 
     useEffect(() => {
         let active = true
@@ -315,6 +318,36 @@ export default function JobDetail({
         }
     }, [jobId])
 
+    const handleDownloadReport = async () => {
+        setReportLoading(true)
+        setReportError(null)
+
+        try {
+            const report = await getJobReport(jobId)
+            const blob = new Blob(
+                [JSON.stringify(report, null, 2)],
+                { type: "application/json" },
+            )
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement("a")
+
+            link.href = url
+            link.download = `deepsight-job-${jobId}-report.json`
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+            URL.revokeObjectURL(url)
+        } catch (reportLoadError) {
+            setReportError(
+                reportLoadError instanceof Error
+                    ? reportLoadError.message
+                    : "Unable to download job report.",
+            )
+        } finally {
+            setReportLoading(false)
+        }
+    }
+
     return (
         <section className="job-detail">
             <div className="job-detail__header">
@@ -333,14 +366,34 @@ export default function JobDetail({
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    className="job-detail__close"
-                    onClick={onClose}
-                >
-                    Close
-                </button>
+                <div className="job-detail__header-actions">
+                    <button
+                        type="button"
+                        className="job-detail__report"
+                        disabled={loading || reportLoading}
+                        onClick={() => void handleDownloadReport()}
+                    >
+                        {reportLoading
+                            ? "Preparing report..."
+                            : "Download JSON report"}
+                    </button>
+
+                    <button
+                        type="button"
+                        className="job-detail__close"
+                        onClick={onClose}
+                    >
+                        Close
+                    </button>
+                </div>
             </div>
+
+            {reportError && (
+                <div className="job-detail__report-error" role="alert">
+                    <strong>Report unavailable</strong>
+                    <span>{reportError}</span>
+                </div>
+            )}
 
             {loading ? (
                 <div className="job-detail__empty">

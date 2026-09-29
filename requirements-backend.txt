@@ -8,3 +8,4 @@ pydantic-settings==2.15.0
 python-multipart
 
 opencv-python==5.0.0.93
+ultralytics==8.4.161

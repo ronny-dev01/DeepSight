@@ -14,6 +14,8 @@ import type {
 import "./JobDetail.css"
 import OperationalMap from "./OperationalMap"
 
+const REFRESH_MS = 5000
+
 function formatMs(value: number | null): string {
     return value === null ? "N/A" : `${value.toFixed(1)} ms`
 }
@@ -264,9 +266,12 @@ export default function JobDetail({
     useEffect(() => {
         let active = true
 
-        async function load() {
+        async function load(showLoading = false) {
             try {
-                setLoading(true)
+                if (showLoading) {
+                    setLoading(true)
+                }
+
                 setError(null)
 
                 const [jobResponse, reviewResponse] =
@@ -298,10 +303,15 @@ export default function JobDetail({
             }
         }
 
-        void load()
+        void load(true)
+
+        const timer = window.setInterval(() => {
+            void load()
+        }, REFRESH_MS)
 
         return () => {
             active = false
+            window.clearInterval(timer)
         }
     }, [jobId])
 

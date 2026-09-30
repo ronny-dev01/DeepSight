@@ -1,85 +1,87 @@
-﻿@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+﻿
+@import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700;800&display=swap");
+
 
 :root {
-  font-family: "DM Sans", Inter, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  color: #e5f1f7;
-  background: #07131e;
+  font-family: "DM Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #e6edf5;
+  background: #07111c;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 
-  --ds-bg: #07131e;
-  --ds-surface: #0c1d2a;
-  --ds-surface-raised: #102536;
-  --ds-surface-hover: #142d3e;
-  --ds-border: #1d394a;
-  --ds-border-soft: #162f3e;
-  --ds-text: #e5f1f7;
-  --ds-muted: #8ca7b7;
-  --ds-subtle: #607d8e;
-  --ds-cyan: #5ad8dc;
-  --ds-cyan-strong: #2cbcc5;
-  --ds-green: #57d6a0;
-  --ds-amber: #f4bd69;
-  --ds-red: #f17e83;
-  --ds-sidebar-width: 252px;
-  --ds-header-height: 76px;
+  --ds-bg: #07111c;
+  --ds-surface: #0b1927;
+  --ds-surface-2: #102235;
+  --ds-surface-3: #142b40;
+  --ds-border: #20374a;
+  --ds-border-soft: #172b3d;
+  --ds-text: #e6edf5;
+  --ds-muted: #8ca1b3;
+  --ds-subtle: #60788c;
+  --ds-cyan: #45d4d2;
+  --ds-cyan-soft: #12353b;
+  --ds-green: #54d6a1;
+  --ds-amber: #f0b65e;
+  --ds-red: #ff8585;
+  --ds-radius: 12px;
+  --ds-shadow: 0 16px 40px rgba(0, 0, 0, .2);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html {
   min-width: 320px;
-  min-height: 100%;
   scroll-behavior: smooth;
-  background: var(--ds-bg);
+  scrollbar-color: #29465a #091522;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: var(--ds-bg);
+  background:
+    radial-gradient(ellipse at 72% -15%, rgba(37, 112, 132, .12), transparent 42%),
+    var(--ds-bg);
   color: var(--ds-text);
 }
 
-body,
-button,
-input,
-textarea,
-select {
-  font-family: "DM Sans", Inter, system-ui, sans-serif;
-}
+body, button, input, textarea, select { font-family: inherit; }
 
-button,
-input,
-textarea,
-select {
-  font-size: inherit;
-}
+button, input, textarea, select { font-size: inherit; }
 
-button {
-  color: inherit;
-}
+button { color: inherit; }
 
-a {
-  color: inherit;
-}
-
-::selection {
-  color: #04151c;
-  background: var(--ds-cyan);
-}
-
-:focus-visible {
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: 2px solid var(--ds-cyan);
   outline-offset: 3px;
 }
 
-#root {
-  min-height: 100vh;
+a { color: inherit; }
+
+::selection {
+  color: #06151b;
+  background: var(--ds-cyan);
+}
+
+#root { min-height: 100vh; }
+
+.mono,
+code,
+[data-mono="true"] {
+  font-family: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }

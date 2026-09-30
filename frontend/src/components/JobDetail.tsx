@@ -134,6 +134,8 @@ export default function JobDetail({
         : -1;
 
     useEffect(() => {
+        // Intentional viewer reset when the selected detection changes.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setImageError(false);
         setZoom(1);
         setPan({ x: 0, y: 0 });

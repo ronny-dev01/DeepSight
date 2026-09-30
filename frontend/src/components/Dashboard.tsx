@@ -3,12 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Waves,
   RefreshCw,
-  FolderOpen,
-  Activity,
-  ClipboardCheck,
-  FileText,
-  Settings,
-  ScanSearch,
 } from "lucide-react";
 
 import {
@@ -352,13 +346,18 @@ export default function Dashboard({
   }, []);
 
   useEffect(() => {
-    void loadDashboard();
+    const initialLoad = window.setTimeout(() => {
+      void loadDashboard();
+    }, 0);
 
     const timer = window.setInterval(() => {
       void loadDashboard();
     }, REFRESH_MS);
 
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(timer);
+    };
   }, [loadDashboard]);
 
   const handleDecision = async (

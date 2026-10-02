@@ -14,9 +14,9 @@ class Settings(BaseSettings):
     max_image_height: int = 12000
     max_concurrent_jobs: int = 1
 
-    model_name: str = "gv-yolo12"
-    model_version: str = "initial"
-    model_path: str = "ml/models/gv-yolo12/weights.onnx"
+    model_name: str = "ghostvision-crab-pot-custom"
+    model_version: str = "v5-hardneg-epoch9-640-6caf0930"
+    model_path: str = "storage/runs/crab_pot_v5_finetune_hardneg/weights/best.pt"
     model_device: str = "cpu"
     model_confidence: float = 0.25
     model_iou: float = 0.45

@@ -5,11 +5,12 @@
 **Smart India Hackathon 2026 — SIH26057**
 **Organization:** Ministry of Earth Sciences (MoES) / National Institute of Ocean Technology (NIOT)
 
-DeepSight is an engineering-focused marine-vision platform designed to process **Side-Scan Sonar (SSS) imagery**, run AI-assisted object detection, extract explainable acoustic evidence, track detections across frames, associate detections with available geospatial metadata, and provide a **human-in-the-loop review workflow** for marine researchers.
+DeepSight is an AI-powered marine sonar analysis platform designed to process **Side-Scan Sonar (SSS) imagery**, detect underwater objects and anomalies using computer vision, extract supporting acoustic evidence, associate detections with available geospatial metadata, and provide a human-in-the-loop review workflow.
 
-The system is designed around one core principle:
+The current project is developed and tested **locally on localhost**.
 
-> **A detection should be traceable from its original sonar source to the final reviewed result.**
+> **Current status:** Local development / SIH 2026 MVP
+> **Deployment:** Not currently deployed
 
 ---
 
@@ -20,148 +21,150 @@ The system is designed around one core principle:
 * [Solution](#solution)
 * [Core Capabilities](#core-capabilities)
 * [System Architecture](#system-architecture)
-* [End-to-End Processing Pipeline](#end-to-end-processing-pipeline)
+* [Processing Pipeline](#processing-pipeline)
 * [AI/ML Pipeline](#aiml-pipeline)
-* [Explainable Acoustic Evidence](#explainable-acoustic-evidence)
+* [Explainable Evidence](#explainable-evidence)
 * [Cross-Frame Persistence](#cross-frame-persistence)
 * [Geolocation](#geolocation)
 * [Human Review](#human-review)
-* [Reports and Provenance](#reports-and-provenance)
 * [Technology Stack](#technology-stack)
 * [Repository Structure](#repository-structure)
-* [Local Development](#local-development)
+* [Local Setup](#local-setup)
 * [Environment Configuration](#environment-configuration)
 * [Database Setup](#database-setup)
-* [Running the Backend](#running-the-backend)
-* [Running the Worker](#running-the-worker)
-* [Running the Frontend](#running-the-frontend)
-* [Running with Docker](#running-with-docker)
-* [API Surface](#api-surface)
-* [Testing and Quality Checks](#testing-and-quality-checks)
-* [Model and Evaluation](#model-and-evaluation)
+* [Run the Backend](#run-the-backend)
+* [Run the Worker](#run-the-worker)
+* [Run the Frontend](#run-the-frontend)
+* [Local Development Workflow](#local-development-workflow)
+* [API](#api)
+* [Model Configuration](#model-configuration)
+* [Model Evaluation](#model-evaluation)
+* [Testing](#testing)
 * [Current Limitations](#current-limitations)
 * [Roadmap](#roadmap)
-* [Engineering Principles](#engineering-principles)
-* [Smart India Hackathon Context](#smart-india-hackathon-context)
+* [Smart India Hackathon](#smart-india-hackathon)
 * [Project Status](#project-status)
 
 ---
 
 # Overview
 
-Side-Scan Sonar produces acoustic imagery rather than conventional optical photographs. Objects and seabed structures are represented through patterns of acoustic return, shadow, intensity, texture, and geometry.
+Side-Scan Sonar imagery is fundamentally different from conventional RGB imagery.
 
-This creates a different computer-vision problem from ordinary RGB image detection.
+Instead of visible colors and textures, sonar imagery represents acoustic returns from the underwater environment. Objects can appear through combinations of:
 
-DeepSight combines:
+* acoustic intensity
+* shape
+* texture
+* shadow
+* seabed interaction
+* surrounding context
+
+DeepSight combines machine learning with a backend processing pipeline and a web-based review interface.
 
 ```text
-Side-Scan Sonar Imagery
-        │
-        ▼
-   Data Ingestion
-        │
-        ▼
- Image / Metadata Validation
-        │
-        ▼
-   AI Object Detection
-        │
-        ▼
- Acoustic Evidence Extraction
-        │
-        ▼
- Cross-Frame Persistence
-        │
-        ▼
- Geospatial Association
-        │
-        ▼
- Human Review
-        │
-        ▼
- Research / Detection Report
+Side-Scan Sonar Image
+          │
+          ▼
+     Data Ingestion
+          │
+          ▼
+   Image Validation
+          │
+          ▼
+    AI Detection
+          │
+          ▼
+ Acoustic Evidence
+          │
+          ▼
+ Cross-Frame Analysis
+          │
+          ▼
+ Geospatial Metadata
+          │
+          ▼
+     Human Review
+          │
+          ▼
+   Research / Report
 ```
-
-The platform is intended to make the complete processing chain observable and reproducible rather than treating the model prediction as the final answer.
 
 ---
 
 # Problem
 
-Marine debris and underwater anomalies are difficult to inspect at scale.
+Underwater marine surveys can generate large volumes of sonar imagery that may require extensive manual inspection.
 
-Traditional sonar analysis can involve:
+Potential challenges include:
 
-* large volumes of imagery
-* manual inspection
+* large sonar datasets
 * visually ambiguous acoustic signatures
-* repeated detections across adjacent frames
+* repeated observations across frames
 * uncertain object boundaries
-* incomplete geospatial metadata
-* differences between sonar acquisition conditions
-* difficulty explaining why an AI system produced a particular detection
+* false detections
+* different sonar acquisition conditions
+* incomplete positioning metadata
+* difficulty explaining AI predictions
+* need for human validation
 
 A useful system therefore needs more than an object detector.
 
-It needs a workflow that connects:
+It needs a workflow connecting:
 
-**source data → detection → evidence → persistence → location → review → report**
+**sonar data → AI detection → evidence → context → review → report**
 
 ---
 
 # Solution
 
-DeepSight provides an integrated workflow for marine sonar analysis.
+DeepSight provides an integrated local web application for marine sonar analysis.
 
-### 1. Real sonar ingestion
+The platform is designed around several major components.
 
-The system accepts actual source imagery rather than relying on hardcoded demonstration detections.
+### AI Detection
 
-### 2. AI-assisted detection
+A YOLO-based computer-vision model analyzes sonar imagery and generates candidate detections.
 
-The backend loads a registered detection model and performs inference against the ingested imagery.
+### Acoustic Evidence
 
-### 3. Evidence extraction
+Additional information can be extracted around detections to provide supporting evidence for review.
 
-Detection results can be accompanied by measurable evidence derived from the underlying sonar image.
+### Cross-Frame Analysis
 
-### 4. Cross-frame reasoning
+Detections can be analyzed across multiple frames instead of treating every prediction as completely independent.
 
-Repeated detections can be examined across frames instead of treating every frame prediction as an isolated event.
+### Geospatial Context
 
-### 5. Geospatial association
+Available positioning metadata can be associated with detections.
 
-When valid positioning metadata is available, detections can be associated with geographic information.
+### Human Review
 
-### 6. Human review
+Researchers can review AI-generated detections before considering them confirmed results.
 
-AI-generated detections are presented for review rather than automatically treated as ground truth.
+### Persistent Data
 
-### 7. Reporting
-
-Reviewed information can be used to generate structured research-oriented reports.
+Jobs, detections, review information, and associated metadata are persisted through the backend database.
 
 ---
 
 # Core Capabilities
 
-| Capability              | Description                                           |
-| ----------------------- | ----------------------------------------------------- |
-| Sonar ingestion         | Ingest real Side-Scan Sonar imagery                   |
-| AI detection            | YOLO-based object detection                           |
-| Model registry          | Versioned model and artifact metadata                 |
-| Artifact verification   | Optional model SHA-256 verification                   |
-| Acoustic evidence       | Extract measurable image-level evidence               |
-| Cross-frame persistence | Associate repeated observations                       |
-| Geolocation             | Preserve and expose available positioning information |
-| Human review            | Review and classify AI-generated detections           |
-| Provenance              | Preserve source/model/evidence information            |
-| Reports                 | Generate structured detection/review outputs          |
-| Persistent storage      | PostgreSQL-backed application state                   |
-| Background processing   | Dedicated ingestion worker                            |
-| API                     | FastAPI backend                                       |
-| Web application         | React + TypeScript frontend                           |
+| Capability            | Description                             |
+| --------------------- | --------------------------------------- |
+| Sonar ingestion       | Process real Side-Scan Sonar imagery    |
+| AI detection          | YOLO-based object detection             |
+| Model registry        | Versioned model metadata                |
+| Artifact verification | Optional model hash verification        |
+| Evidence extraction   | Additional detection-related evidence   |
+| Cross-frame analysis  | Analyze repeated observations           |
+| Geolocation           | Preserve available positioning metadata |
+| Human review          | Review AI-generated detections          |
+| Reports               | Generate structured report information  |
+| Persistent storage    | PostgreSQL/PostGIS                      |
+| Background processing | Dedicated ingestion worker              |
+| REST API              | FastAPI backend                         |
+| Web interface         | React + TypeScript frontend             |
 
 ---
 
@@ -169,8 +172,8 @@ Reviewed information can be used to generate structured research-oriented report
 
 ```text
                          ┌─────────────────────────┐
-                         │       Web Client        │
-                         │ React + TypeScript/Vite │
+                         │     React Frontend      │
+                         │     TypeScript/Vite     │
                          └────────────┬────────────┘
                                       │
                                       │ HTTP
@@ -178,86 +181,88 @@ Reviewed information can be used to generate structured research-oriented report
                          ┌─────────────────────────┐
                          │      FastAPI API        │
                          │                         │
-                         │ • Ingestion              │
-                         │ • Review                 │
-                         │ • Reports                │
-                         │ • Health                 │
-                         └───────┬─────────┬───────┘
-                                 │         │
-                                 │         │
-                         ┌───────▼───┐ ┌──▼──────────┐
-                         │ PostgreSQL│ │   Redis     │
-                         │ + PostGIS │ │ coordination│
-                         └───────┬───┘ └─────────────┘
-                                 │
-                                 │ queued jobs
-                                 ▼
-                         ┌─────────────────────────┐
-                         │    Background Worker    │
-                         │                         │
-                         │ • Job recovery          │
-                         │ • Job claiming          │
-                         │ • Ingestion pipeline    │
-                         │ • AI inference          │
-                         └────────────┬────────────┘
-                                      │
-                                      ▼
-                         ┌─────────────────────────┐
-                         │       ML Pipeline       │
-                         │                         │
-                         │ Model Registry          │
-                         │ YOLO Detector           │
-                         │ Evidence Extraction    │
-                         │ Persistence Analysis    │
-                         └─────────────────────────┘
+                         │  Ingestion              │
+                         │  Review                 │
+                         │  Reports                │
+                         │  Health                 │
+                         └───────────┬─────────────┘
+                                     │
+                         ┌───────────┴───────────┐
+                         │                       │
+                         ▼                       ▼
+                ┌─────────────────┐      ┌───────────────┐
+                │   PostgreSQL    │      │     Redis     │
+                │    + PostGIS    │      │               │
+                └────────┬────────┘      └───────────────┘
+                         │
+                         ▼
+                ┌─────────────────────┐
+                │   Background Worker │
+                │                     │
+                │  Job Queue          │
+                │  Ingestion          │
+                │  AI Processing      │
+                └──────────┬──────────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │     ML Pipeline     │
+                │                     │
+                │  Model Registry     │
+                │  YOLO Detection     │
+                │  Evidence           │
+                │  Analysis           │
+                └─────────────────────┘
 ```
 
----
-
-# End-to-End Processing Pipeline
-
-DeepSight separates ingestion, processing, inference, evidence generation, and review.
-
-## Stage 1 — Ingestion
-
-A user submits sonar imagery through the application.
-
-The backend creates an ingestion job and persists the associated state.
-
-The system applies configured limits such as:
-
-* maximum upload size
-* maximum number of files per job
-* maximum image width
-* maximum image height
-* concurrent processing limits
+Everything currently runs on the developer's local machine.
 
 ---
 
-## Stage 2 — Job Processing
+# Processing Pipeline
 
-A dedicated worker continuously polls for queued jobs.
+## 1. Sonar Ingestion
+
+A user uploads sonar imagery through the frontend.
+
+The backend creates an ingestion job and stores its state.
+
+The application enforces configurable limits for:
+
+* upload size
+* number of files
+* image dimensions
+* concurrent processing
+
+---
+
+## 2. Background Processing
+
+The ingestion worker continuously checks for queued jobs.
 
 The worker:
 
 1. acquires a PostgreSQL advisory lock
-2. recovers orphaned jobs when necessary
-3. claims the next queued job
-4. executes the ingestion pipeline
-5. records processing failures
-6. continues polling for subsequent jobs
+2. recovers orphaned jobs
+3. claims queued jobs
+4. processes ingestion
+5. runs the processing pipeline
+6. records failures
+7. continues polling
 
-The current worker polling interval is **1 second**.
+The current polling interval is:
 
-A PostgreSQL advisory lock prevents multiple marine-ingestion workers from processing the same worker workload simultaneously.
+```text
+1 second
+```
 
 ---
 
-## Stage 3 — AI Inference
+## 3. AI Detection
 
-The configured model is loaded through the project's model/inference layer.
+The configured YOLO model processes the sonar imagery.
 
-Current default model configuration:
+The current default configuration uses:
 
 ```text
 Model:
@@ -269,191 +274,152 @@ v5-hardneg-epoch9-640-6caf0930
 Architecture:
 YOLO11n
 
-Input size:
+Image Size:
 640
 
-Confidence threshold:
+Confidence Threshold:
 0.25
 
-IoU threshold:
+IoU Threshold:
 0.45
 
 Device:
-CPU by default
+CPU
 
 Tiling:
 Disabled by default
 ```
 
-The model registry is used to identify the active artifact and associated metadata.
-
 ---
 
-## Stage 4 — Evidence Extraction
+## 4. Evidence Extraction
 
-A prediction is not treated as self-explanatory.
+Detection results can be accompanied by additional evidence derived from the source sonar imagery.
 
-DeepSight can extract additional evidence associated with a detection, allowing reviewers to inspect information surrounding the predicted object.
-
-This supports a more transparent workflow:
-
-```text
-Prediction
-   │
-   ├── Bounding box
-   ├── Confidence
-   ├── Model identity
-   ├── Model version
-   ├── Source image
-   └── Acoustic / image evidence
-```
-
----
-
-## Stage 5 — Cross-Frame Persistence
-
-A sonar object may appear in multiple adjacent frames.
-
-Treating every detection independently can create repeated observations of the same physical object.
-
-DeepSight therefore includes processing intended to support cross-frame persistence analysis.
-
-The goal is to distinguish:
-
-```text
-Frame A ──┐
-Frame B ──┼──► repeated observation
-Frame C ──┘
-```
-
-from unrelated detections.
-
----
-
-## Stage 6 — Geospatial Association
-
-When valid geospatial metadata exists, it can be associated with detections.
-
-DeepSight follows an important data-integrity rule:
-
-> **Unavailable metadata remains unavailable.**
-
-The system does not manufacture coordinates when source metadata does not contain valid location information.
-
----
-
-## Stage 7 — Human Review
-
-AI output enters a review workflow.
-
-Reviewers can inspect detections and associated evidence before accepting or rejecting them.
-
-This creates a distinction between:
+This allows the review interface to provide more context than simply displaying a bounding box.
 
 ```text
 AI Prediction
-      ↓
-Review Candidate
-      ↓
-Human Decision
-      ↓
-Reviewed Result
+     │
+     ├── Class
+     ├── Bounding Box
+     ├── Confidence
+     ├── Model
+     ├── Model Version
+     ├── Source
+     └── Evidence
 ```
 
-The AI prediction itself is not automatically treated as confirmed ground truth.
-
 ---
 
-# Explainable Acoustic Evidence
+## 5. Cross-Frame Persistence
 
-One of the project's important design goals is moving beyond:
+The same physical object can appear in multiple sonar frames.
 
-> "The model detected an object."
-
-toward:
-
-> "The model detected an object, and the application can expose additional measurable evidence associated with that detection."
-
-Evidence can help a reviewer understand the prediction in the context of the underlying sonar image.
-
-This is particularly important for sonar imagery because acoustic signatures can be ambiguous and can differ significantly from conventional photographic appearance.
-
----
-
-# Cross-Frame Persistence
-
-Marine sonar surveys commonly contain sequential or overlapping observations.
-
-A detection appearing in several frames may provide stronger contextual evidence than an isolated prediction.
-
-DeepSight therefore treats temporal/frame relationships as part of the analysis workflow.
-
-The system can preserve relationships between observations rather than reducing the entire pipeline to independent frame-level bounding boxes.
-
----
-
-# Geolocation
-
-Geospatial information is treated as source-derived data.
-
-The system can preserve available positioning metadata and expose it alongside relevant detection information.
-
-The implementation intentionally avoids fabricated coordinates.
+DeepSight therefore includes analysis intended to associate repeated observations across frames.
 
 ```text
-Valid metadata
-      │
-      ▼
-Detection ↔ Location
+Frame 1 ──┐
+Frame 2 ──┼──► Potential persistent observation
+Frame 3 ──┘
+```
 
-Missing metadata
-      │
-      ▼
+This helps provide contextual information around individual predictions.
+
+---
+
+## 6. Geolocation
+
+When valid positioning metadata exists, it can be associated with detection information.
+
+DeepSight does **not** generate fake coordinates.
+
+```text
+Metadata available
+       │
+       ▼
+Detection + Location
+
+Metadata unavailable
+       │
+       ▼
 Location remains unavailable
 ```
 
-This distinction is important for scientific traceability.
+This keeps location information traceable to the original source data.
+
+---
+
+## 7. Human Review
+
+AI predictions enter a review workflow.
+
+A reviewer can inspect available information before making a decision.
+
+```text
+AI Detection
+     │
+     ▼
+Review Candidate
+     │
+     ▼
+Human Decision
+     │
+     ▼
+Persisted Review Result
+```
+
+The objective is to keep humans in the decision loop instead of treating every model prediction as confirmed truth.
+
+---
+
+# Explainable Evidence
+
+DeepSight is designed around the idea that:
+
+> A model prediction should be accompanied by useful context whenever that context can be derived from the source data.
+
+The review interface can expose evidence associated with detections, helping researchers investigate why a prediction was generated.
+
+This is particularly useful for sonar imagery because underwater acoustic signatures can be ambiguous.
+
+---
+
+# Geospatial Information
+
+Geospatial information is treated as source-derived data.
+
+If valid metadata is available, DeepSight can preserve and expose that information alongside detection results.
+
+If metadata is unavailable, the system does not fabricate coordinates.
+
+This distinction is important for maintaining data provenance.
 
 ---
 
 # Human Review
 
-The review workflow is designed around the principle that machine predictions require contextual verification.
+The review interface is designed to help researchers inspect AI-generated detections.
 
-A reviewer can inspect:
+Depending on the available information, a reviewer can inspect:
 
-* detected object
+* detected class
 * confidence
-* model/version
-* evidence
-* source information
-* available geospatial information
-* detection context
-
-The review state is persisted in the application database.
-
-This allows downstream reports to distinguish between model-generated predictions and reviewed outcomes.
-
----
-
-# Reports and Provenance
-
-DeepSight is designed to preserve provenance throughout the processing chain.
-
-Relevant information may include:
-
+* bounding box
 * source image
-* ingestion job
-* detection
 * model name
 * model version
-* model artifact
 * evidence
-* review decision
-* geospatial metadata
-* processing state
+* geospatial information
+* review state
 
-The objective is to make a detection traceable rather than producing an unexplained final result.
+This creates a clear distinction between:
+
+```text
+Model Prediction
+       ≠
+Confirmed Result
+```
 
 ---
 
@@ -466,20 +432,20 @@ The objective is to make a detection traceable rather than producing an unexplai
 * Uvicorn
 * SQLAlchemy
 * Alembic
-* Pydantic Settings
 * Psycopg
+* Pydantic Settings
 * GeoAlchemy2
 * PostgreSQL
 * PostGIS
 
-## AI / Computer Vision
+## Machine Learning
 
 * Ultralytics
-* YOLO-based detection
+* YOLO
 * OpenCV
-* NumPy-based image processing
-* Versioned model artifacts
+* Computer vision
 * Model registry
+* Model artifact verification
 
 ## Frontend
 
@@ -491,14 +457,13 @@ The objective is to make a detection traceable rather than producing an unexplai
 * Lucide React
 * ESLint
 
-## Infrastructure
+## Local Infrastructure
 
+* PostgreSQL
+* PostGIS
 * Redis
-* Docker
-* Git
-* GitHub Actions
-* Local filesystem storage
-* S3-compatible storage support through `boto3`
+* Python virtual environment
+* Node.js / npm
 
 ---
 
@@ -519,6 +484,7 @@ DeepSight/
 │   ├── src/
 │   ├── public/
 │   ├── package.json
+│   ├── package-lock.json
 │   ├── vite.config.ts
 │   └── tsconfig*.json
 │
@@ -556,39 +522,41 @@ DeepSight/
 └── README.md
 ```
 
-The repository also contains a collection of model-development and evaluation utilities for dataset construction, error analysis, false-positive analysis, localization analysis, confidence analysis, and audit generation.
+The repository also contains multiple scripts used for:
+
+* dataset analysis
+* false-positive analysis
+* hard-negative generation
+* model error analysis
+* confidence analysis
+* localization analysis
+* annotation auditing
+* evaluation
+* visualization
 
 ---
 
-# Local Development
+# Local Setup
+
+DeepSight currently runs **locally**.
+
+There is no cloud deployment required for the current development setup.
 
 ## Prerequisites
 
-Before running DeepSight locally, install:
+Install the following:
 
-* Python 3.14
-* Node.js and npm
-* PostgreSQL
-* PostGIS extension
-* Redis
 * Git
-
-The backend dependencies are pinned in:
-
-```text
-requirements-backend.txt
-```
-
-The frontend dependencies are pinned through:
-
-```text
-frontend/package.json
-frontend/package-lock.json
-```
+* Python 3.14
+* Node.js
+* npm
+* PostgreSQL
+* PostGIS
+* Redis
 
 ---
 
-## 1. Clone the Repository
+# 1. Clone the Repository
 
 ```powershell
 git clone https://github.com/ronny-dev01/DeepSight.git
@@ -597,9 +565,9 @@ cd DeepSight
 
 ---
 
-## 2. Create the Python Virtual Environment
+# 2. Create the Python Environment
 
-From the repository root:
+From the project root:
 
 ```powershell
 python -m venv .venv
@@ -611,7 +579,7 @@ Activate it:
 .\.venv\Scripts\Activate.ps1
 ```
 
-Your terminal should then show the virtual environment, for example:
+You should see:
 
 ```text
 (.venv) PS D:\Projects\DeepSight>
@@ -619,18 +587,31 @@ Your terminal should then show the virtual environment, for example:
 
 ---
 
-## 3. Install Backend Dependencies
+# 3. Install Backend Dependencies
 
 ```powershell
 python -m pip install --upgrade pip
 pip install -r requirements-backend.txt
 ```
 
+The backend requirements include:
+
+```text
+FastAPI
+Uvicorn
+SQLAlchemy
+Alembic
+Psycopg
+GeoAlchemy2
+Pydantic Settings
+OpenCV
+Ultralytics
+Boto3
+```
+
 ---
 
-## 4. Install Frontend Dependencies
-
-Open another PowerShell terminal or continue from the project root:
+# 4. Install Frontend Dependencies
 
 ```powershell
 cd frontend
@@ -642,190 +623,199 @@ cd ..
 
 # Environment Configuration
 
-Create a local `.env` file from the provided example:
+Create your local environment file:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-The default development configuration expects:
+The default local configuration expects PostgreSQL and Redis to run on the local machine.
+
+Important environment variables include:
 
 ```env
-PROJECT_NAME=SIH2026_MarineMVP
-ENVIRONMENT=development
-FRONTEND_ORIGIN=
-
 DATABASE_URL=postgresql+psycopg://sonar:sonar@localhost:5432/sonar_mvp
-REDIS_URL=redis://localhost:6379/0
 
-MAX_UPLOAD_BYTES=524288000
-MAX_FILES_PER_JOB=200
-MAX_IMAGE_WIDTH=12000
-MAX_IMAGE_HEIGHT=12000
-MAX_CONCURRENT_JOBS=1
+REDIS_URL=redis://localhost:6379/0
 
 MODEL_NAME=ghostvision-crab-pot-custom
 MODEL_VERSION=v5-hardneg-epoch9-640-6caf0930
 MODEL_PATH=storage/runs/crab_pot_v5_finetune_hardneg/weights/best.pt
-MODEL_ARTIFACT_KEY=models/ghostvision-crab-pot-custom/v5-hardneg-epoch9-640-6caf0930/best.pt
+
 MODEL_DEVICE=cpu
 MODEL_CONFIDENCE=0.25
 MODEL_IOU=0.45
 MODEL_IMAGE_SIZE=640
 
-MODEL_TILING_ENABLED=false
-MODEL_TILE_SIZE=384
-MODEL_TILE_STRIDE=256
-MODEL_TILE_IOU=0.70
-MODEL_TILE_NMS_IOU=0.50
-
-MODEL_REGISTRY_PATH=ml/models/model_registry.json
-MODEL_VERIFY_HASH=true
-
 STORAGE_BACKEND=local
-STORAGE_BUCKET=
-STORAGE_REGION=
-STORAGE_ENDPOINT_URL=
-STORAGE_PREFIX=
 
 API_HOST=127.0.0.1
 API_PORT=8000
 ```
 
-### Important
+### Do not commit `.env`
 
-Do not commit your real `.env` file.
-
-The repository contains `.env.example` as the development configuration template.
+Your actual `.env` contains local configuration and should remain untracked.
 
 ---
 
 # Database Setup
 
-DeepSight uses PostgreSQL and PostGIS.
-
-The development configuration expects:
+DeepSight uses:
 
 ```text
-Database:
-sonar_mvp
-
-User:
-sonar
-
-Password:
-sonar
-
-Host:
-localhost
-
-Port:
-5432
+PostgreSQL
++
+PostGIS
 ```
 
-The database must have the PostGIS extension available because the application uses geospatial database functionality.
+The default development database configuration is:
 
-Once PostgreSQL is running and the database exists, apply the Alembic migrations:
+```text
+Host:     localhost
+Port:     5432
+Database: sonar_mvp
+User:     sonar
+Password: sonar
+```
+
+Make sure PostgreSQL is running and the database exists.
+
+PostGIS must also be available because DeepSight uses geospatial functionality.
+
+---
+
+# Run Database Migrations
+
+From the project root:
 
 ```powershell
 alembic upgrade head
 ```
 
-The Alembic configuration reads the database URL from the application's settings.
+Alembic uses the database URL configured through the application's settings.
+
+The migration configuration is located at:
+
+```text
+services/api/alembic/
+```
 
 ---
 
-# Redis
+# Start Redis
 
-The development configuration expects Redis at:
+Make sure Redis is running locally:
 
 ```text
 redis://localhost:6379/0
 ```
 
-Start Redis using your local Redis installation or your preferred local Redis runtime.
-
-Verify that Redis is available before starting the application services.
+The backend expects Redis to be available at this address unless `.env` is configured differently.
 
 ---
 
-# Running the Backend
+# Run the Backend
 
-From the repository root with the Python virtual environment activated:
+Open **PowerShell Terminal 1**.
+
+Activate the virtual environment:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Then run:
 
 ```powershell
 uvicorn services.api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-The API will be available at:
+The backend will run at:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-FastAPI also provides its development API documentation through its standard documentation endpoints.
-
 ---
 
-# Running the Worker
+# Run the Worker
 
-The ingestion worker is a separate process.
+Open **PowerShell Terminal 2**.
 
-Open another PowerShell terminal, activate the virtual environment, and run:
+Activate the virtual environment:
+
+```powershell
+cd D:\Projects\DeepSight
+.\.venv\Scripts\Activate.ps1
+```
+
+Run the worker:
 
 ```powershell
 python -m services.worker.worker
 ```
 
-The worker continuously checks for queued ingestion jobs.
+The worker will continuously monitor queued ingestion jobs.
 
-Its current behavior includes:
-
-* PostgreSQL advisory locking
-* orphaned-job recovery
-* queued-job claiming
-* ingestion processing
-* exception logging
-* continuous polling
-
-The worker uses a **1-second polling interval**.
-
-Only one worker acquires the configured PostgreSQL advisory lock for the marine-ingestion workload.
+It uses a PostgreSQL advisory lock to prevent multiple marine-ingestion workers from processing the same workload simultaneously.
 
 ---
 
-# Running the Frontend
+# Run the Frontend
 
-Open another terminal:
+Open **PowerShell Terminal 3**.
 
 ```powershell
-cd frontend
+cd D:\Projects\DeepSight\frontend
 npm run dev
 ```
 
-Vite will start the development server.
+Vite will start the frontend development server.
 
-The frontend API client reads:
+The frontend API client uses:
 
 ```text
 VITE_API_BASE_URL
 ```
 
-from the frontend environment.
-
-For local development, configure the frontend API base URL to point to the backend:
+Configure it to point to the local backend:
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
+Then open the local Vite URL shown in the terminal.
+
 ---
 
-# Development Process Layout
+# Complete Local Development Setup
 
-A typical local development setup therefore consists of three running processes:
+At runtime, DeepSight currently consists of:
 
-### Terminal 1 — API
+```text
+                 LOCAL MACHINE
+┌──────────────────────────────────────────────┐
+│                                              │
+│  PostgreSQL + PostGIS                        │
+│       │                                      │
+│       ├──────────────┐                       │
+│       │              │                       │
+│       ▼              ▼                       │
+│    FastAPI          Worker                   │
+│       │              │                       │
+│       │              ▼                       │
+│       │          ML Pipeline                 │
+│       │                                      │
+│       ▼                                      │
+│  React/Vite Frontend                         │
+│                                              │
+│  Redis                                       │
+│                                              │
+└──────────────────────────────────────────────┘
+```
+
+### Terminal 1 — Backend
 
 ```powershell
 uvicorn services.api.main:app --reload --host 127.0.0.1 --port 8000
@@ -844,374 +834,341 @@ cd frontend
 npm run dev
 ```
 
-PostgreSQL and Redis must also be running.
+### Required local services
+
+```text
+PostgreSQL + PostGIS
+Redis
+```
 
 ---
 
-# Running with Docker
+# API
 
-The repository includes a backend Dockerfile.
-
-Build the image:
-
-```powershell
-docker build -t deepsight-backend .
-```
-
-Run the container:
-
-```powershell
-docker run --rm -p 8000:8000 deepsight-backend
-```
-
-The container starts the FastAPI application using:
-
-```text
-uvicorn services.api.main:app --host 0.0.0.0 --port 8000
-```
-
-The current Dockerfile packages the Python backend runtime and application code.
-
-Database and Redis connectivity still need to be provided through the container environment/network configuration.
-
----
-
-# API Surface
-
-The FastAPI application currently exposes functionality around several primary areas:
-
-```text
-Health
-  └── service health / dependency state
-
-Ingestion
-  └── upload and processing workflows
-
-Review
-  └── detection review and review state
-
-Reports
-  └── structured report generation
-```
-
-The implementation is organized under:
+The backend is organized into several API areas:
 
 ```text
 services/api/routes/
+│
+├── health.py
+├── ingestion.py
+├── review.py
+└── report.py
 ```
 
-with:
+The API is implemented using FastAPI.
+
+The application entry point is:
 
 ```text
-health.py
-ingestion.py
-review.py
-report.py
+services.api.main:app
 ```
 
 ---
 
-# Model Registry
+# Model Configuration
 
-DeepSight maintains model metadata through:
+The active model is configured through:
 
 ```text
 ml/models/model_registry.json
 ```
 
-The registry identifies the active model and its artifact information.
-
-The application can verify the model artifact hash before using it.
-
-This provides a reproducibility mechanism between:
+Current model:
 
 ```text
-Model Name
-     │
-     ▼
-Model Version
-     │
-     ▼
-Artifact
-     │
-     ▼
-SHA-256
-     │
-     ▼
-Inference Runtime
+ghostvision-crab-pot-custom
 ```
 
----
-
-# Model and Evaluation
-
-The currently registered primary model is:
+Current version:
 
 ```text
-Model:
-ghostvision-crab-pot-custom
-
-Version:
 v5-hardneg-epoch9-640-6caf0930
+```
 
 Architecture:
+
+```text
 YOLO11n
+```
 
-Input:
+Input resolution:
+
+```text
 640 × 640
+```
 
-Class:
+Current detection class:
+
+```text
 Crab-Pot
 ```
 
-## Recorded validation metrics
+Default inference configuration:
 
-The model registry records the following validation metrics:
+```text
+Confidence: 0.25
+IoU:        0.45
+Device:     CPU
+Tiling:     Disabled
+```
 
-| Metric    | Validation |
-| --------- | ---------: |
-| Precision |     0.5860 |
-| Recall    |     0.5035 |
-| mAP50     |     0.5010 |
-| mAP50-95  |     0.1702 |
+The application can verify the model artifact hash through the model registry configuration.
 
-## Recorded test metrics
+---
 
-The recorded test evaluation contains:
+# Model Evaluation
+
+The currently registered model has recorded validation and test metrics.
+
+## Validation
+
+| Metric    |  Value |
+| --------- | -----: |
+| Precision | 0.5860 |
+| Recall    | 0.5035 |
+| mAP50     | 0.5010 |
+| mAP50-95  | 0.1702 |
+
+## Test
 
 ```text
 Images:     398
 Instances:  567
 ```
 
-| Metric    |   Test |
+| Metric    |  Value |
 | --------- | -----: |
 | Precision | 0.4478 |
 | Recall    | 0.4074 |
 | mAP50     | 0.3739 |
 | mAP50-95  | 0.1487 |
 
-These metrics describe the recorded evaluation runs and should not be interpreted as a guarantee of performance on arbitrary real-world sonar surveys.
+These are recorded evaluation results for the current model/version and are not a guarantee of performance on every real-world sonar dataset.
 
-### Confidence is not accuracy
+### Confidence vs Accuracy
 
-The inference confidence threshold is currently configured at:
+The configured confidence threshold is:
 
 ```text
 0.25
 ```
 
-A model confidence score is not equivalent to accuracy.
+Confidence is not the same thing as accuracy.
 
-Changing the confidence threshold changes the precision/recall operating point; it does not automatically make the underlying model more accurate.
+A high confidence score does not automatically mean that a prediction is correct, and changing the confidence threshold changes the operating point between precision and recall.
 
 ---
 
-# Model Development and Analysis
+# Model Analysis
 
-The repository contains tooling for investigating model behavior beyond a single aggregate metric.
+The repository contains several analysis utilities used during model development.
 
-Examples include utilities for:
-
-* ground-truth annotation analysis
-* false-positive analysis
-* false-positive type analysis
-* IoU analysis
-* localization analysis
-* confidence comparisons
-* hard-negative mining
-* high-confidence FP/TP audits
-* dataset construction
-* model error analysis
-* contact-sheet generation
-* annotation audits
-
-Representative scripts include:
+Examples include:
 
 ```text
 analyze_gt_annotations.py
 analyze_v5_errors.py
 analyze_v5_fp.py
 analyze_v5_fp_types.py
+
 compare_v1_v5_fp_thresholds.py
 compare_v1_v5_recall_matched.py
+
 make_high_conf_fp_tp_audit.py
 make_annotation_audit.py
 make_localization_sheet.py
+
+generate_v5_raw_predictions.py
+tp_confidence_compare.py
 ```
 
-This analysis layer is intended to support evidence-based model iteration rather than relying exclusively on a single metric.
+These tools are used to investigate:
+
+* false positives
+* false negatives
+* confidence distributions
+* localization
+* IoU
+* dataset quality
+* hard negatives
+* annotation quality
+* model failure cases
 
 ---
 
-# Testing and Quality Checks
+# Testing
 
-Backend contract tests are included under:
+## Backend
+
+Backend tests are located under:
 
 ```text
 tests/
 ```
 
-The project also contains GitHub Actions configuration under:
+The project also contains GitHub Actions configuration for automated backend contract testing.
 
-```text
-.github/workflows/
-```
-
-Frontend quality checks are available through:
+## Frontend lint
 
 ```powershell
 cd frontend
 npm run lint
 ```
 
-Frontend production build:
+## Frontend build
 
 ```powershell
 npm run build
 ```
 
-Preview the production build locally:
+The build performs TypeScript compilation and the Vite production build.
+
+## Frontend preview
 
 ```powershell
 npm run preview
 ```
 
-Before committing changes, useful repository checks include:
+## Git whitespace check
+
+Before committing changes:
 
 ```powershell
 git diff --check
 ```
 
-and the relevant backend/frontend tests and builds.
-
----
-
-# Engineering Principles
-
-DeepSight follows several project-level principles.
-
-## No mock detections
-
-Production application results should originate from the actual inference and persistence pipeline.
-
-## No fabricated coordinates
-
-If geospatial metadata is unavailable, the application should preserve that absence.
-
-## No hardcoded result arrays
-
-Detection results should come from actual processing and persisted application state.
-
-## No fake metrics
-
-Model metrics must correspond to recorded evaluation results.
-
-## Database as the source of truth
-
-Application state should be persisted and retrieved through the backend data layer.
-
-## Model provenance
-
-The active model, version, artifact, and verification information should remain traceable.
-
-## Human-in-the-loop validation
-
-AI-generated detections are review candidates rather than automatic scientific conclusions.
-
-## Evidence over assumptions
-
-The system should expose measurable evidence wherever possible and avoid claiming information that the source data cannot support.
-
 ---
 
 # Current Limitations
 
-DeepSight is an actively developed SIH 2026 MVP and has important limitations.
+DeepSight is an actively developed **SIH 2026 MVP**.
 
-### Model limitations
+The following limitations should be considered.
 
-The current registered model has moderate recorded evaluation metrics and should not be treated as a universally reliable marine-object detector.
+## Model performance
 
-The available evaluation is associated with the datasets and splits used during development.
+The current model's recorded evaluation metrics do not establish universal performance across all marine sonar environments.
 
-Real-world performance can vary with:
+Performance can vary depending on:
 
-* sonar sensor
+* sonar hardware
 * acquisition conditions
 * depth
-* seabed characteristics
-* object appearance
+* seabed type
+* image quality
 * resolution
+* object appearance
 * noise
 * preprocessing
 * geographic environment
 
-### Class coverage
+## Detection classes
 
-The current registered model configuration identifies:
+The current registered model is configured for:
 
 ```text
 Crab-Pot
 ```
 
-as its detection class.
+The broader DeepSight architecture is intended for marine debris and anomaly detection, but the current model should not be represented as a complete detector for every marine object.
 
-The system architecture is intended to support broader anomaly/debris detection, but a single registered model/class should not be presented as comprehensive marine debris recognition.
+## Geolocation
 
-### Geolocation
+Geolocation depends on valid source metadata.
 
-Location information depends on valid source metadata.
+The application does not invent coordinates when source positioning information is unavailable.
 
-No location should be inferred merely because a detection exists.
+## Generalization
 
-### Generalization
-
-Recorded benchmark performance does not establish generalization to every sonar system, geographic region, or acquisition condition.
+Benchmark metrics from a particular dataset or evaluation split should not automatically be interpreted as real-world performance across unrelated sonar surveys.
 
 ---
 
 # Roadmap
 
-Future development areas include:
+Potential future development includes:
 
-* expanded marine debris/anomaly classes
-* stronger cross-frame association
-* improved acoustic evidence extraction
-* additional sonar preprocessing techniques
-* broader evaluation datasets
-* harder geographic/source-domain validation
+* additional marine debris classes
+* broader anomaly detection
+* improved cross-frame association
+* stronger acoustic evidence extraction
 * improved model calibration
-* more advanced geospatial visualization
-* scalable background processing
-* cloud deployment
-* object-storage integration
-* production observability
-* richer report generation
-* role-based research workflows
-* improved model/version management
+* larger and more diverse datasets
+* geographic/source-domain evaluation
+* improved geospatial visualization
+* richer reporting
+* advanced model version management
+* production deployment
+* cloud object storage
+* scalable processing infrastructure
+* monitoring and observability
+
+These items represent future development and should not be interpreted as currently deployed functionality.
 
 ---
 
-# Smart India Hackathon Context
+# Engineering Principles
 
-## SIH 2026
+DeepSight follows several important development principles.
 
-**Problem Statement:** SIH26057
+### Real Data
 
-**Title:**
+Use actual sonar data and persisted application state.
 
-> AI-Powered Automated Underwater Marine Debris and Anomaly Detection System using Side-Scan Sonar Imagery
+### No Mock Detections
 
-**Organization:**
+Detection results should originate from the actual inference pipeline.
 
-Ministry of Earth Sciences (MoES) / National Institute of Ocean Technology (NIOT)
+### No Fake Coordinates
 
-DeepSight is being developed as the technical platform for addressing the problem through a combination of:
+Unavailable geospatial metadata remains unavailable.
 
+### No Hardcoded Results
+
+Application results should come from actual processing and database state.
+
+### No Fake Metrics
+
+Evaluation numbers must correspond to actual recorded experiments.
+
+### Database as Source of Truth
+
+Persisted backend state is authoritative.
+
+### Model Provenance
+
+Model name, version, artifact, and verification information should remain traceable.
+
+### Human-in-the-Loop
+
+AI predictions are review candidates rather than automatic scientific conclusions.
+
+### Evidence-Based Development
+
+Model improvements should be supported by measurable evaluation and error analysis.
+
+---
+
+# Smart India Hackathon 2026
+
+### Problem Statement
+
+**SIH26057**
+
+### Title
+
+**AI-Powered Automated Underwater Marine Debris and Anomaly Detection System using Side-Scan Sonar Imagery**
+
+### Organization
+
+**Ministry of Earth Sciences (MoES) / National Institute of Ocean Technology (NIOT)**
+
+DeepSight is being developed to address this problem through a combination of:
+
+* artificial intelligence
 * computer vision
-* marine sonar analysis
-* machine learning
+* Side-Scan Sonar analysis
 * geospatial processing
 * backend engineering
 * human review
@@ -1219,111 +1176,99 @@ DeepSight is being developed as the technical platform for addressing the proble
 
 ---
 
-# Why DeepSight?
-
-DeepSight is not intended to be only a YOLO inference demo.
-
-The broader objective is to build a complete engineering workflow around marine sonar intelligence:
-
-```text
-                ┌────────────────────┐
-                │   Real Sonar Data  │
-                └─────────┬──────────┘
-                          │
-                          ▼
-                ┌────────────────────┐
-                │   AI Detection     │
-                └─────────┬──────────┘
-                          │
-                          ▼
-                ┌────────────────────┐
-                │ Acoustic Evidence  │
-                └─────────┬──────────┘
-                          │
-                          ▼
-                ┌────────────────────┐
-                │ Cross-Frame Context│
-                └─────────┬──────────┘
-                          │
-                          ▼
-                ┌────────────────────┐
-                │ Geospatial Context │
-                └─────────┬──────────┘
-                          │
-                          ▼
-                ┌────────────────────┐
-                │   Human Review     │
-                └─────────┬──────────┘
-                          │
-                          ▼
-                ┌────────────────────┐
-                │ Research / Report  │
-                └────────────────────┘
-```
-
-The value of the platform is therefore in connecting these stages into a traceable workflow.
-
----
-
 # Project Status
 
-DeepSight is an **active Smart India Hackathon 2026 MVP under development**.
+**Development Stage:** Active MVP development
 
-Current implementation areas include:
+**Execution Environment:** Localhost
 
-* React/TypeScript frontend
-* FastAPI backend
-* PostgreSQL/PostGIS persistence
-* Redis integration
-* background ingestion worker
-* YOLO-based marine detection
-* model registry
-* evidence extraction
-* cross-frame analysis
-* geospatial handling
-* human review workflow
-* reporting
-* automated testing
-* Docker support
-* CI workflow
-* model evaluation and error-analysis tooling
+**Cloud Deployment:** Not currently deployed
 
-The system should be evaluated according to the capabilities actually implemented in the current repository rather than treating planned roadmap functionality as completed functionality.
+**Primary Model:** `ghostvision-crab-pot-custom`
+
+**Backend:** FastAPI
+
+**Frontend:** React + TypeScript + Vite
+
+**Database:** PostgreSQL + PostGIS
+
+**Background Processing:** Python worker
+
+**Cache / Supporting Service:** Redis
 
 ---
 
 # Development Philosophy
 
-DeepSight is being developed with an emphasis on:
+DeepSight is being developed as more than a model inference demo.
 
-**Real Data**
+The goal is to create a traceable engineering workflow:
 
-Use real sonar data and real persisted application state wherever available.
+```text
+Real Sonar Data
+      │
+      ▼
+AI Detection
+      │
+      ▼
+Acoustic Evidence
+      │
+      ▼
+Cross-Frame Context
+      │
+      ▼
+Geospatial Context
+      │
+      ▼
+Human Review
+      │
+      ▼
+Persisted Result
+      │
+      ▼
+Research Report
+```
+
+The project prioritizes:
 
 **Traceability**
-
-Every meaningful result should be traceable back to its source and processing context.
+Results should remain connected to their source and processing context.
 
 **Reproducibility**
-
-Model versions, artifacts, configurations, and migrations should be identifiable.
+Models, versions, configurations, and database migrations should be identifiable.
 
 **Explainability**
-
-Where possible, expose evidence that helps a reviewer understand the prediction.
+Useful evidence should be available around AI-generated detections.
 
 **Human Oversight**
-
-Machine predictions should support researchers rather than silently replacing their judgment.
+Researchers remain part of the final review process.
 
 **Engineering Discipline**
-
-Changes should be developed through isolated branches, tested, reviewed, and integrated through version control.
+Changes should be tested, reviewed, and tracked through version control.
 
 ---
 
-# License
+## Local Development Summary
 
-This repository is currently maintained as part of the Smart India Hackathon 2026 project.
+```powershell
+# Backend environment
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-backend.txt
 
-License and redistribution terms should be added here when the project establishes its final licensing policy.
+# Database
+alembic upgrade head
+
+# Terminal 1 — API
+uvicorn services.api.main:app --reload --host 127.0.0.1 --port 8000
+
+# Terminal 2 — Worker
+python -m services.worker.worker
+
+# Terminal 3 — Frontend
+cd frontend
+npm install
+npm run dev
+```
+
+DeepSight currently runs locally and is intended to be developed, tested, and demonstrated through this localhost environment.

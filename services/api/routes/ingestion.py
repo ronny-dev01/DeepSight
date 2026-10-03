@@ -1,6 +1,5 @@
 from pathlib import Path
 import json
-import shutil
 from uuid import uuid4
 
 from fastapi import (
@@ -31,10 +30,10 @@ from services.api.schemas.ingestion import (
     IngestionJobSummaryResponse,
     SSSIngestionManifest,
 )
+from services.api.services.storage import storage
 from services.api.services.ingestion import (
     PROJECT_ROOT,
     STAGING_ROOT,
-    UPLOAD_ROOT,
     IngestionValidationError,
     calculate_bundle_checksum,
     canonical_manifest_bytes,
@@ -129,6 +128,7 @@ async def create_sss_ingestion_job(
 
     records: list[dict] = []
     file_hashes: list[tuple[str, str]] = []
+    uploaded_object_keys: list[str] = []
     total_bytes = 0
 
     try:
@@ -180,19 +180,18 @@ async def create_sss_ingestion_job(
         db.add(job)
         db.flush()
 
-        final_dir = UPLOAD_ROOT / f"job_{job.id}"
-        final_dir.parent.mkdir(parents=True, exist_ok=True)
-
-        if final_dir.exists():
-            raise IngestionValidationError(
-                f"Storage directory already exists for job {job.id}."
-            )
-
-        staging_dir.rename(final_dir)
-
         for record in records:
             latitude = record["latitude"]
             longitude = record["longitude"]
+
+            object_key = (
+                f"jobs/{job.id}/frames/{record['filename']}"
+            )
+
+            with (staging_dir / record["filename"]).open("rb") as source:
+                storage.save_file(source, object_key)
+
+            uploaded_object_keys.append(object_key)
 
             location = None
 
@@ -208,11 +207,7 @@ async def create_sss_ingestion_job(
                 modality="side_scan_sonar",
                 sequence_id=manifest_data.sequence_id,
                 frame_index=record["frame_index"],
-                image_path=str(
-                    final_dir.joinpath(record["filename"]).relative_to(
-                        PROJECT_ROOT
-                    )
-                ),
+                image_path=object_key,
                 image_sha256=record["sha256"],
                 width=record["width"],
                 height=record["height"],
@@ -227,6 +222,7 @@ async def create_sss_ingestion_job(
             db.add(frame)
 
         db.commit()
+        remove_directory(staging_dir)
 
         return IngestionJobResponse(
             id=job.id,
@@ -241,6 +237,10 @@ async def create_sss_ingestion_job(
     except IngestionValidationError as exc:
         db.rollback()
         remove_directory(staging_dir)
+
+        for object_key in uploaded_object_keys:
+            storage.delete_file(object_key)
+
         raise HTTPException(
             status_code=422,
             detail=str(exc),
@@ -250,10 +250,8 @@ async def create_sss_ingestion_job(
         db.rollback()
         remove_directory(staging_dir)
 
-        final_dir = (
-            UPLOAD_ROOT / f"job_{getattr(locals().get('job', None), 'id', 'unknown')}"
-        )
-        remove_directory(final_dir)
+        for object_key in uploaded_object_keys:
+            storage.delete_file(object_key)
 
         raise HTTPException(
             status_code=500,

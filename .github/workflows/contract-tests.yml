@@ -48,6 +48,9 @@ jobs:
       - name: Install backend dependencies
         run: python -m pip install -r requirements-backend.txt
 
+      - name: Install pytest for CI
+        run: python -m pip install pytest
+
       - name: Enable PostGIS
         run: >-
           python -c "from sqlalchemy import create_engine, text; import os; engine=create_engine(os.environ['DATABASE_URL']); conn=engine.connect(); conn.execute(text('CREATE EXTENSION IF NOT EXISTS postgis')); conn.commit(); conn.close()"
@@ -63,6 +66,17 @@ jobs:
 
       - name: Run SSS manifest validation test
         run: python -m tests.sss_manifest_validation_test
+
+      - name: Run deployment regression suite
+        run: >-
+          python -m pytest
+          tests/storage_service_test.py
+          tests/ingestion_service_test.py
+          tests/inference_detector_test.py
+          tests/inference_registry_test.py
+          tests/inference_tiling_test.py
+          tests/human_review_contract_test.py
+          -q
 
   frontend-ci:
     runs-on: ubuntu-latest
@@ -89,3 +103,22 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+  docker-image-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build backend Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: false
+          tags: deepsight-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

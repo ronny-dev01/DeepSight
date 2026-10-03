@@ -4,6 +4,7 @@
 class Settings(BaseSettings):
     project_name: str = "SIH2026_MarineMVP"
     environment: str = "development"
+    frontend_origin: str = ""
 
     database_url: str
     redis_url: str
@@ -14,9 +15,10 @@ class Settings(BaseSettings):
     max_image_height: int = 12000
     max_concurrent_jobs: int = 1
 
-    model_name: str = "gv-yolo12"
-    model_version: str = "initial"
-    model_path: str = "ml/models/gv-yolo12/weights.onnx"
+    model_name: str = "ghostvision-crab-pot-custom"
+    model_version: str = "v5-hardneg-epoch9-640-6caf0930"
+    model_path: str = "storage/runs/crab_pot_v5_finetune_hardneg/weights/best.pt"
+    model_artifact_key: str = "models/ghostvision-crab-pot-custom/v5-hardneg-epoch9-640-6caf0930/best.pt"
     model_device: str = "cpu"
     model_confidence: float = 0.25
     model_iou: float = 0.45
@@ -28,6 +30,11 @@ class Settings(BaseSettings):
     model_tile_nms_iou: float = 0.50
     model_registry_path: str = "ml/models/model_registry.json"
     model_verify_hash: bool = True
+
+    storage_backend: str = "local"
+    storage_bucket: str = ""
+    storage_region: str = ""
+    storage_prefix: str = ""
 
     api_host: str = "127.0.0.1"
     api_port: int = 8000

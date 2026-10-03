@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+﻿from datetime import datetime, timezone
 from pathlib import Path
 import mimetypes
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -22,7 +22,7 @@ from services.api.schemas.review import (
     DetectionReviewUpdate,
     ReviewDecision,
 )
-from services.api.services.ingestion import PROJECT_ROOT
+from services.api.services.storage import StorageError, storage
 
 
 router = APIRouter(
@@ -425,6 +425,7 @@ def finalize_detection_review(
 )
 def get_detection_review_image(
     review_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> FileResponse:
     row = (
@@ -454,30 +455,24 @@ def get_detection_review_image(
 
     frame = row[1]
 
-    storage_root = (
-        PROJECT_ROOT / "storage" / "uploads"
-    ).resolve()
-
-    image_path = (
-        PROJECT_ROOT / frame.image_path
-    ).resolve()
-
-    if storage_root not in image_path.parents:
+    try:
+        image_path, temporary = storage.materialize(frame.image_path)
+    except StorageError as exc:
         raise HTTPException(
             status_code=404,
             detail="Review image not found.",
-        )
-
-    if not image_path.is_file():
-        raise HTTPException(
-            status_code=404,
-            detail="Review image not found.",
-        )
+        ) from exc
 
     media_type = (
         mimetypes.guess_type(str(image_path))[0]
         or "application/octet-stream"
     )
+
+    if temporary:
+        background_tasks.add_task(
+            storage.cleanup_materialized,
+            image_path,
+        )
 
     return FileResponse(
         image_path,

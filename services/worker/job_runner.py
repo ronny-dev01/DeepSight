@@ -15,6 +15,8 @@ from services.api.models import (
     SonarFrame,
     Track,
 )
+from services.api.services.storage import storage
+from services.api.services.model_bootstrap import ensure_model_artifact
 from services.worker.pipeline import SSSFramePipeline
 
 
@@ -32,6 +34,7 @@ def _get_pipeline() -> SSSFramePipeline:
     global _pipeline
 
     if _pipeline is None:
+        ensure_model_artifact()
         _pipeline = SSSFramePipeline()
 
     return _pipeline
@@ -126,15 +129,21 @@ def process_ingestion_job(
         db_track_ids: dict[int, int] = {}
 
         for frame in frames:
-            image_path = (
-                PROJECT_ROOT / frame.image_path
+            image_path, temporary = storage.materialize(
+                frame.image_path
             )
 
-            started = perf_counter()
+            try:
+                started = perf_counter()
 
-            result = pipeline.process_frame(
-                image_path
-            )
+                result = pipeline.process_frame(
+                    image_path
+                )
+            finally:
+                if temporary:
+                    storage.cleanup_materialized(
+                        image_path
+                    )
 
             elapsed_ms = (
                 perf_counter() - started

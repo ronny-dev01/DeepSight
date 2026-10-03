@@ -1,6 +1,7 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -15,6 +16,15 @@ app = FastAPI(
     title=settings.project_name,
     version="0.1.0",
 )
+
+if settings.frontend_origin.strip():
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[settings.frontend_origin.strip()],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 app.include_router(health_router)
 app.include_router(ingestion_router)

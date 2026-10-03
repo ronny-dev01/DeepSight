@@ -1,4 +1,4 @@
-﻿import type {
+import type {
     DetectionReview,
     DetectionReviewListResponse,
     DetectionReviewUpdate,
@@ -8,6 +8,10 @@
 } from "../types/api"
 
 const REQUEST_TIMEOUT_MS = 8000
+
+const API_BASE_URL = (
+    import.meta.env.VITE_API_BASE_URL ?? ""
+).replace(/\/$/, "")
 
 async function requestJson<T>(
     url: string,
@@ -21,7 +25,7 @@ async function requestJson<T>(
     )
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`${API_BASE_URL}${url}`, {
             ...options,
             headers: {
                 Accept: "application/json",
@@ -118,7 +122,14 @@ export async function updateReview(
 export function getReviewImageUrl(
     review: DetectionReview,
 ): string {
-    return review.image_url
+    if (
+        review.image_url.startsWith("http://") ||
+        review.image_url.startsWith("https://")
+    ) {
+        return review.image_url
+    }
+
+    return `${API_BASE_URL}${review.image_url}`
 }
 
 export async function getJobReviews(
@@ -157,7 +168,7 @@ async function requestFormData<T>(
     )
 
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`${API_BASE_URL}${url}`, {
             method: "POST",
             body: formData,
             cache: "no-store",

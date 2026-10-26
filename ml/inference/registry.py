@@ -55,9 +55,10 @@ def verify_model_artifact(
     model_version: str,
     model_path: str | Path,
 ) -> Path:
+    root = Path(project_root).resolve()
     registry_file = Path(registry_path)
     if not registry_file.is_absolute():
-        registry_file = Path(project_root) / registry_file
+        registry_file = root / registry_file
 
     registry_file = registry_file.resolve()
     registry = _load_registry(registry_file)
@@ -87,7 +88,7 @@ def verify_model_artifact(
 
     configured_path = Path(model_path)
     if not configured_path.is_absolute():
-        configured_path = Path(project_root) / configured_path
+        configured_path = root / configured_path
 
     configured_path = configured_path.resolve()
 
@@ -97,9 +98,13 @@ def verify_model_artifact(
             f"Model '{model_name}' has no valid registered artifact path."
         )
 
-    registered_path = (
-        Path(project_root) / registered_artifact
-    ).resolve()
+    registered_path = (root / registered_artifact).resolve()
+
+    if not registered_path.is_relative_to(root):
+        raise ModelRegistryError(
+            f"Model artifact path for '{model_name}' is outside project root: "
+            f"{registered_path}"
+        )
 
     if configured_path != registered_path:
         raise ModelRegistryError(

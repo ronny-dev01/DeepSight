@@ -148,3 +148,29 @@ def test_registry_rejects_artifact_path_mismatch(tmp_path):
             model_version="v1",
             model_path=actual,
         )
+
+
+def test_registry_rejects_artifact_outside_project_root(tmp_path):
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+
+    outside_artifact = tmp_path / "outside.pt"
+    outside_artifact.write_bytes(b"model")
+
+    digest = hashlib.sha256(b"model").hexdigest().upper()
+
+    registry = _write_registry(
+        project_root,
+        "../outside.pt",
+        model_version="v1",
+        artifact_sha256=digest,
+    )
+
+    with pytest.raises(ModelRegistryError, match="outside project root"):
+        verify_model_artifact(
+            registry_path=registry,
+            project_root=project_root,
+            model_name="test-model",
+            model_version="v1",
+            model_path=outside_artifact,
+        )

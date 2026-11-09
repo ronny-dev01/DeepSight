@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     storage_backend: str = "local"
     storage_bucket: str = ""
     storage_region: str = ""
+    storage_endpoint_url: str = ""
     storage_prefix: str = ""
 
     api_host: str = "127.0.0.1"

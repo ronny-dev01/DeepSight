@@ -1,4 +1,5 @@
-﻿import { useState } from "react";
+﻿
+import { useState } from "react";
 import {
   Bell,
   ChevronRight,
@@ -17,56 +18,73 @@ import {
   X,
 } from "lucide-react";
 
-import Dashboard, { type WorkspaceSection } from "./components/Dashboard";
+import {
+  BrowserRouter,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
+
+import Dashboard, {
+  type WorkspaceSection,
+} from "./components/Dashboard";
+
 import "./App.css";
 
 const nav: {
   id: WorkspaceSection;
   label: string;
   icon: typeof LayoutDashboard;
+  path: string;
 }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "projects", label: "Projects", icon: FolderKanban },
-  { id: "sonar-analysis", label: "Sonar Analysis", icon: ScanLine },
-  { id: "processing-jobs", label: "Processing Jobs", icon: Database },
-  { id: "review-queue", label: "Review Queue", icon: ClipboardCheck },
-  { id: "reports", label: "Reports", icon: FileText },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "overview", label: "Overview", icon: LayoutDashboard, path: "/" },
+  { id: "projects", label: "Projects", icon: FolderKanban, path: "/projects" },
+  { id: "sonar-analysis", label: "Sonar Analysis", icon: ScanLine, path: "/analysis" },
+  { id: "processing-jobs", label: "Processing Jobs", icon: Database, path: "/jobs" },
+  { id: "review-queue", label: "Review Queue", icon: ClipboardCheck, path: "/reviews" },
+  { id: "reports", label: "Reports", icon: FileText, path: "/reports" },
+  { id: "settings", label: "Settings", icon: Settings, path: "/settings" },
 ];
 
-const titles: Record<
-  WorkspaceSection,
-  {
-    title: string;
-  }
-> = {
-  overview: { title: "Mission Overview" },
-  projects: { title: "Projects" },
-  "sonar-analysis": { title: "Sonar Analysis" },
-  "processing-jobs": { title: "Processing Jobs" },
-  "review-queue": { title: "Review Queue" },
-  reports: { title: "Reports" },
-  settings: { title: "Settings" },
+const titles: Record<WorkspaceSection, string> = {
+  overview: "Mission Overview",
+  projects: "Projects",
+  "sonar-analysis": "Sonar Analysis",
+  "processing-jobs": "Processing Jobs",
+  "review-queue": "Review Queue",
+  reports: "Reports",
+  settings: "Settings",
 };
 
-export default function App() {
-  const [section, setSection] = useState<WorkspaceSection>("overview");
+const pathToSection: Record<string, WorkspaceSection> = {
+  "/": "overview",
+  "/projects": "projects",
+  "/analysis": "sonar-analysis",
+  "/jobs": "processing-jobs",
+  "/reviews": "review-queue",
+  "/reports": "reports",
+  "/settings": "settings",
+};
+
+function Workspace() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
 
-  const changeSection = (id: WorkspaceSection) => {
-    setSection(id);
-    setSidebarOpen(false);
-  };
-
+  const section = pathToSection[location.pathname] ?? "overview";
   const title = titles[section];
+
+  const closeSidebar = () => setSidebarOpen(false);
 
   return (
     <div className="ds-app">
       {sidebarOpen && (
         <button
+          type="button"
           className="ds-backdrop"
           aria-label="Close menu"
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeSidebar}
         />
       )}
 
@@ -86,8 +104,9 @@ export default function App() {
           </div>
 
           <button
+            type="button"
             className="ds-icon-button ds-mobile-close"
-            onClick={() => setSidebarOpen(false)}
+            onClick={closeSidebar}
             aria-label="Close menu"
           >
             <X size={18} />
@@ -104,20 +123,19 @@ export default function App() {
             const Icon = item.icon;
 
             return (
-              <button
+              <NavLink
                 key={item.id}
-                className={`ds-nav-item ${
-                  section === item.id ? "is-active" : ""
-                }`}
-                onClick={() => changeSection(item.id)}
-                aria-current={
-                  section === item.id ? "page" : undefined
+                to={item.path}
+                end={item.path === "/"}
+                className={({ isActive }) =>
+                  `ds-nav-item ${isActive ? "is-active" : ""}`
                 }
+                onClick={closeSidebar}
               >
                 <Icon size={18} strokeWidth={1.8} />
                 <span>{item.label}</span>
                 <small>{String(index + 1).padStart(2, "0")}</small>
-              </button>
+              </NavLink>
             );
           })}
         </nav>
@@ -148,6 +166,7 @@ export default function App() {
         <header className="ds-topbar">
           <div className="ds-topbar-left">
             <button
+              type="button"
               className="ds-icon-button ds-menu-button"
               onClick={() => setSidebarOpen(true)}
               aria-label="Open menu"
@@ -158,7 +177,7 @@ export default function App() {
             <div className="ds-breadcrumb">
               <span>DeepSight</span>
               <ChevronRight size={14} />
-              <strong>{title.title}</strong>
+              <strong>{title}</strong>
             </div>
           </div>
 
@@ -169,6 +188,7 @@ export default function App() {
             </span>
 
             <button
+              type="button"
               className="ds-icon-button"
               aria-label="Help"
             >
@@ -176,6 +196,7 @@ export default function App() {
             </button>
 
             <button
+              type="button"
               className="ds-icon-button"
               aria-label="Notifications"
             >
@@ -191,5 +212,22 @@ export default function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Workspace />} />
+        <Route path="/projects" element={<Workspace />} />
+        <Route path="/analysis" element={<Workspace />} />
+        <Route path="/jobs" element={<Workspace />} />
+        <Route path="/reviews" element={<Workspace />} />
+        <Route path="/reports" element={<Workspace />} />
+        <Route path="/settings" element={<Workspace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }

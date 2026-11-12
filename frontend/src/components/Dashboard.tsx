@@ -1,920 +1,1048 @@
-﻿
-import { useCallback, useEffect, useState } from "react";
-import {
-  Waves,
-  RefreshCw,
-} from "lucide-react";
+﻿import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+import type { ReactNode } from "react";
+import { RefreshCw, Waves } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import {
-  getIngestionJobs,
-  getPendingReviews,
-  getReviewImageUrl,
-  updateReview,
+    getIngestionJobs,
+    getPendingReviews,
+    getReviewImageUrl,
+    updateReview,
 } from "../api/client";
 
 import type {
-  DetectionReview,
-  IngestionJobSummary,
+    DetectionReview,
+    IngestionJobSummary,
 } from "../types/api";
 
-import "./Dashboard.css";
-import JobDetail from "./JobDetail";
+import { useWorkspaceSettings } from "../hooks/useWorkspaceSettings";
 import UploadPanel from "./UploadPanel";
+import SettingsPanel from "./SettingsPanel";
+import JobDetail from "./JobDetail";
+
+import "./Dashboard.css";
 
 export type WorkspaceSection =
-  | "overview"
-  | "projects"
-  | "sonar-analysis"
-  | "processing-jobs"
-  | "review-queue"
-  | "reports"
-  | "settings";
+    | "overview"
+    | "projects"
+    | "sonar-analysis"
+    | "processing-jobs"
+    | "review-queue"
+    | "reports"
+    | "settings";
 
-const REFRESH_MS = 5000;
+type ReviewDecision = "accepted" | "rejected";
 
-function formatDate(value: string | null): string {
-  if (!value) return "N/A";
+const PAGE_SIZE = 25;
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "N/A";
+const SECTION_ITEMS: {
+    id: WorkspaceSection;
+    label: string;
+}[] = [
+    { id: "overview", label: "Overview" },
+    { id: "projects", label: "Projects" },
+    { id: "sonar-analysis", label: "Sonar analysis" },
+    { id: "processing-jobs", label: "Processing jobs" },
+    { id: "review-queue", label: "Review queue" },
+    { id: "reports", label: "Reports" },
+    { id: "settings", label: "Settings" },
+];
 
-  return date.toLocaleString();
+function getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    return "An unexpected error occurred.";
 }
 
-function statusClass(status: string): string {
-  const normalized = status.toLowerCase();
+function formatDate(value?: string | null): string {
+    if (!value) return "—";
 
-  if (
-    normalized === "succeeded" ||
-    normalized === "running" ||
-    normalized === "queued" ||
-    normalized === "failed"
-  ) {
-    return `status-${normalized}`;
-  }
+    const date = new Date(value);
 
-  return "status-unknown";
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+    });
 }
 
-function formatConfidence(value: number): string {
-  return `${(value * 100).toFixed(1)}%`;
+function formatConfidence(value?: number | null): string {
+    if (value == null || !Number.isFinite(value)) {
+        return "—";
+    }
+
+    return `${(value * 100).toFixed(1)}%`;
 }
 
-function formatMetric(value: number | null): string {
-  return value !== null ? value.toFixed(3) : "N/A";
+function formatMetric(value?: number | null): string {
+    return value == null || !Number.isFinite(value)
+        ? "—"
+        : value.toLocaleString();
 }
 
-function getErrorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
+function getStatusClass(status?: string | null): string {
+    const normalized = (status ?? "unknown").toLowerCase();
+
+    if (
+        normalized.includes("complete") ||
+        normalized === "success" ||
+        normalized === "succeeded"
+    ) {
+        return "status-badge status-badge--success";
+    }
+
+    if (
+        normalized.includes("fail") ||
+        normalized.includes("error") ||
+        normalized === "cancelled"
+    ) {
+        return "status-badge status-badge--error";
+    }
+
+    if (
+        normalized.includes("process") ||
+        normalized === "running" ||
+        normalized === "queued"
+    ) {
+        return "status-badge status-badge--active";
+    }
+
+    return "status-badge status-badge--neutral";
+}
+
+function getStatusLabel(status?: string | null): string {
+    if (!status) return "Unknown";
+
+    return status
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function SectionHeading({
+    eyebrow,
+    title,
+    description,
+    action,
+}: {
+    eyebrow?: string;
+    title: string;
+    description?: string;
+    action?: ReactNode;
+}) {
+    return (
+        <div className="dashboard-section-heading">
+            <div>
+                {eyebrow && (
+                    <span className="dashboard-eyebrow">{eyebrow}</span>
+                )}
+
+                <h2>{title}</h2>
+
+                {description && <p>{description}</p>}
+            </div>
+
+            {action && (
+                <div className="dashboard-section-heading__action">
+                    {action}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function MetricCard({
+    label,
+    value,
+    description,
+    accent = "default",
+}: {
+    label: string;
+    value: string | number;
+    description: string;
+    accent?: "default" | "blue" | "green" | "amber";
+}) {
+    return (
+        <article className={`metric-card metric-card--${accent}`}>
+            <span className="metric-card__label">{label}</span>
+
+            <strong className="metric-card__value">{value}</strong>
+
+            <span className="metric-card__description">
+                {description}
+            </span>
+        </article>
+    );
+}
+
+function StatusBadge({
+    status,
+}: {
+    status?: string | null;
+}) {
+    return (
+        <span className={getStatusClass(status)}>
+            <span className="status-badge__dot" />
+            {getStatusLabel(status)}
+        </span>
+    );
+}
+
+function EmptyState({
+    title,
+    description,
+}: {
+    title: string;
+    description: string;
+}) {
+    return (
+        <div className="dashboard-empty-state">
+            <div className="dashboard-empty-state__icon">
+                <Waves size={22} />
+            </div>
+
+            <h3>{title}</h3>
+
+            <p>{description}</p>
+        </div>
+    );
 }
 
 function ReviewCard({
-  review,
-  busy,
-  onDecision,
+    review,
+    compact,
+    saving,
+    onDecision,
 }: {
-  review: DetectionReview;
-  busy: boolean;
-  onDecision: (
-    reviewId: number,
-    decision: "accepted" | "rejected",
-  ) => void;
+    review: DetectionReview;
+    compact: boolean;
+    saving: boolean;
+    onDecision: (
+        reviewId: number,
+        decision: ReviewDecision,
+    ) => void;
 }) {
-  return (
-    <article className="review-card">
-      <div className="review-card__image">
-        <img
-          src={getReviewImageUrl(review)}
-          alt={`Sonar frame ${review.frame_index}`}
-          loading="lazy"
-        />
-        <span className="review-card__image-label">
-          FRAME {review.frame_index}
-        </span>
-      </div>
+    const imageUrl = getReviewImageUrl(review);
 
-      <div className="review-card__content">
-        <div className="review-card__header">
-          <div className="review-card__identity">
-            <span className="review-label">
-              DETECTION #{review.detection_id}
-            </span>
-            <h3>{review.class_name}</h3>
-          </div>
+    return (
+        <article
+            className={`review-card ${
+                compact ? "review-card--compact" : ""
+            }`}
+        >
+            <div className="review-card__image">
+                {imageUrl ? (
+                    <img
+                        src={imageUrl}
+                        alt={`Sonar frame ${
+                            review.frame_index ?? "unknown"
+                        } containing detection ${review.detection_id}`}
+                        loading="lazy"
+                    />
+                ) : (
+                    <div className="review-card__image-placeholder">
+                        <Waves size={24} />
+                        <span>Frame preview unavailable</span>
+                    </div>
+                )}
 
-          <span
-            className="review-confidence"
-            aria-label={`Model confidence ${formatConfidence(review.confidence)}`}
-          >
-            {formatConfidence(review.confidence)}
-          </span>
+                <span className="review-card__frame">
+                    Frame {review.frame_index ?? "—"}
+                </span>
+            </div>
+
+            <div className="review-card__body">
+                <div className="review-card__topline">
+                    <span className="review-card__detection-id">
+                        Detection #{review.detection_id}
+                    </span>
+
+                    <span className="review-card__confidence">
+                        {formatConfidence(review.confidence)}
+                    </span>
+                </div>
+
+                <h3>{review.class_name || "Unclassified detection"}</h3>
+
+                <p className="review-card__meta">
+                    Source {review.source_id ?? "—"}
+                    <span>·</span>
+                    Sequence {review.sequence_id ?? "—"}
+                </p>
+
+                {!compact && (
+                    <div className="review-card__evidence">
+                        <div className="review-card__evidence-heading">
+                            <span>Evidence</span>
+
+                            <span>
+                                {review.evidence_available
+                                    ? "Available"
+                                    : "Limited"}
+                            </span>
+                        </div>
+
+                        {review.interpretation && (
+                            <p>{review.interpretation}</p>
+                        )}
+
+                        {review.evidence_index != null && (
+                            <div className="review-card__evidence-index">
+                                Evidence index:{" "}
+                                {review.evidence_index.toFixed(3)}
+                            </div>
+                        )}
+
+                        <div className="review-card__signals">
+                            {review.intensity_contrast != null && (
+                                <span>
+                                    Contrast{" "}
+                                    {review.intensity_contrast.toFixed(2)}
+                                </span>
+                            )}
+
+                            {review.edge_density != null && (
+                                <span>
+                                    Edge density{" "}
+                                    {review.edge_density.toFixed(2)}
+                                </span>
+                            )}
+
+                            {review.shape_compactness != null && (
+                                <span>
+                                    Shape{" "}
+                                    {review.shape_compactness.toFixed(2)}
+                                </span>
+                            )}
+                        </div>
+
+                        <p className="review-card__disclaimer">
+                            Acoustic evidence supports inspection; it is not
+                            a confirmed material classification.
+                        </p>
+                    </div>
+                )}
+
+                <div className="review-card__footer">
+                    <span className="review-card__date">
+                        {formatDate(review.created_at)}
+                    </span>
+
+                    <div className="review-card__actions">
+                        <button
+                            type="button"
+                            className="button button--secondary button--small"
+                            disabled={saving}
+                            onClick={() =>
+                                onDecision(review.id, "rejected")
+                            }
+                        >
+                            Reject
+                        </button>
+
+                        <button
+                            type="button"
+                            className="button button--primary button--small"
+                            disabled={saving}
+                            onClick={() =>
+                                onDecision(review.id, "accepted")
+                            }
+                        >
+                            {saving ? "Saving…" : "Accept"}
+                        </button>
+                    </div>
         </div>
-
-        <div className="review-grid">
-          <div>
-            <span>Evidence</span>
-            <strong>
-              {review.evidence_available ? "Available" : "Unavailable"}
-            </strong>
-          </div>
-          <div>
-            <span>Evidence index</span>
-            <strong>{formatMetric(review.evidence_index)}</strong>
-          </div>
-          <div>
-            <span>Interpretation</span>
-            <strong>
-              {review.interpretation
-                ? review.interpretation.replaceAll("_", " ")
-                : "N/A"}
-            </strong>
-          </div>
-          <div>
-            <span>Frame</span>
-            <strong>#{review.frame_index}</strong>
-          </div>
-        </div>
-
-        <section className="review-evidence" aria-label="Detection evidence">
-          <div className="review-evidence__header">
-            <div>
-              <span className="review-evidence__eyebrow">
-                EXPLAINABLE EVIDENCE
-              </span>
-              <h4>Evidence analysis</h4>
-            </div>
-
-            <span
-              className={`review-evidence__availability ${
-                review.evidence_available
-                  ? "is-available"
-                  : "is-unavailable"
-              }`}
-            >
-              <span className="availability-dot" />
-              {review.evidence_available
-                ? "Evidence available"
-                : "Evidence unavailable"}
-            </span>
-          </div>
-
-          <div className="review-evidence__summary">
-            <div>
-              <span>Heuristic evidence index</span>
-              <strong>{formatMetric(review.evidence_index)}</strong>
-            </div>
-            <div>
-              <span>Interpretation</span>
-              <strong>
-                {review.interpretation
-                  ? review.interpretation.replaceAll("_", " ")
-                  : "N/A"}
-              </strong>
-            </div>
-            <div>
-              <span>Shadow direction</span>
-              <strong>{review.shadow_candidate_direction ?? "N/A"}</strong>
-            </div>
-            <div>
-              <span>Physical direction</span>
-              <strong>
-                {review.physical_shadow_direction_available
-                  ? "Available"
-                  : "Unavailable"}
-              </strong>
-            </div>
-          </div>
-
-          <div className="review-evidence__signals">
-            <div>
-              <span>Intensity contrast</span>
-              <strong>{formatMetric(review.intensity_contrast)}</strong>
-            </div>
-            <div>
-              <span>Edge density</span>
-              <strong>{formatMetric(review.edge_density)}</strong>
-            </div>
-            <div>
-              <span>Shape compactness</span>
-              <strong>{formatMetric(review.shape_compactness)}</strong>
-            </div>
-            <div>
-              <span>Shadow support</span>
-              <strong>{formatMetric(review.shadow_candidate_score)}</strong>
-            </div>
-          </div>
-
-          <p className="review-evidence__note">
-            The heuristic evidence index is an engineering signal for review
-            support, not a probability of object identity.
-          </p>
-        </section>
-
-        <div className="review-source">
-          <span>
-            <span className="review-source__label">SOURCE</span>
-            {review.source_id}
-          </span>
-          <span>
-            <span className="review-source__label">MODEL</span>
-            {review.model_name}
-          </span>
-        </div>
-
-        <div className="review-actions">
-          <button
-            type="button"
-            className="review-button review-button--accept"
-            disabled={busy}
-            onClick={() => onDecision(review.id, "accepted")}
-          >
-            {busy ? "Saving..." : "Accept detection"}
-          </button>
-
-          <button
-            type="button"
-            className="review-button review-button--reject"
-            disabled={busy}
-            onClick={() => onDecision(review.id, "rejected")}
-          >
-            {busy ? "Saving..." : "Reject detection"}
-          </button>
-        </div>
-      </div>
-    </article>
-  );
+    </div>
+</article>
+    );
 }
 
-const pageTitles: Record<
-  WorkspaceSection,
-  { eyebrow: string; title: string; description: string }
-> = {
-  overview: {
-    eyebrow: "WORKSPACE / OVERVIEW",
-    title: "Mission Overview",
-    description:
-      "A live operational view of your sonar ingestion and review workload.",
-  },
-  projects: {
-    eyebrow: "WORKSPACE / PROJECTS",
-    title: "Projects",
-    description:
-      "Explore survey sources represented by your recorded ingestion jobs.",
-  },
-  "sonar-analysis": {
-    eyebrow: "WORKSPACE / SONAR ANALYSIS",
-    title: "Sonar Analysis",
-    description:
-      "Inspect available frames, detections, evidence and job metadata.",
-  },
-  "processing-jobs": {
-    eyebrow: "WORKSPACE / PROCESSING",
-    title: "Processing Jobs",
-    description:
-      "Monitor persisted jobs from the marine sonar processing pipeline.",
-  },
-  "review-queue": {
-    eyebrow: "WORKSPACE / HUMAN REVIEW",
-    title: "Review Queue",
-    description:
-      "Inspect model findings and record human review decisions.",
-  },
-  reports: {
-    eyebrow: "WORKSPACE / REPORTS",
-    title: "Reports",
-    description:
-      "Open a processed job to inspect its available report and export options.",
-  },
-  settings: {
-    eyebrow: "WORKSPACE / SETTINGS",
-    title: "Settings",
-    description:
-      "Workspace information and current application capabilities.",
-  },
-};
-
 export default function Dashboard({
-  activeSection,
+    activeSection,
 }: {
-  activeSection: WorkspaceSection;
+    activeSection: WorkspaceSection;
 }) {
-  const [jobs, setJobs] = useState<IngestionJobSummary[]>([]);
-  const [totalJobs, setTotalJobs] = useState(0);
-  const [pendingReviews, setPendingReviews] = useState<DetectionReview[]>([]);
+    const navigate = useNavigate();
 
-  const [loading, setLoading] = useState(true);
-  const [reviewLoading, setReviewLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reviewError, setReviewError] = useState<string | null>(null);
+    const activeSectionLabel =
+        SECTION_ITEMS.find((item) => item.id === activeSection)?.label ??
+        "Overview";
 
-  const [busyReviewId, setBusyReviewId] = useState<number | null>(null);
-  const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+    const {
+        settings,
+        updateSettings,
+        resetSettings,
+    } = useWorkspaceSettings();
 
-  const loadDashboard = useCallback(async () => {
-    const [jobResult, reviewResult] = await Promise.allSettled([
-      getIngestionJobs(1, 25),
-      getPendingReviews(1, 25),
+    const [jobs, setJobs] = useState<IngestionJobSummary[]>([]);
+    const [totalJobs, setTotalJobs] = useState(0);
+
+    const [reviews, setReviews] = useState<DetectionReview[]>([]);
+    const [totalReviews, setTotalReviews] = useState(0);
+
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [reviewLoading, setReviewLoading] = useState(true);
+
+    const [error, setError] = useState<string | null>(null);
+    const [reviewError, setReviewError] = useState<string | null>(null);
+
+    const [busyReviewId, setBusyReviewId] = useState<number | null>(null);
+    const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
+
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+    const refreshWorkspace = useCallback(
+        async (showInitialLoading = false) => {
+            if (showInitialLoading) {
+                setLoading(true);
+                setReviewLoading(true);
+            } else {
+                setRefreshing(true);
+            }
+
+            setError(null);
+            setReviewError(null);
+
+            try {
+                const [jobsResult, reviewsResult] =
+                    await Promise.allSettled([
+                        getIngestionJobs(1, PAGE_SIZE),
+                        getPendingReviews(1, PAGE_SIZE),
+                    ]);
+
+                if (jobsResult.status === "fulfilled") {
+                    setJobs(jobsResult.value.items);
+                    setTotalJobs(jobsResult.value.total);
+                } else {
+                    setError(getErrorMessage(jobsResult.reason));
+                }
+
+                if (reviewsResult.status === "fulfilled") {
+                    setReviews(reviewsResult.value.items);
+                    setTotalReviews(reviewsResult.value.total);
+                } else {
+                    setReviewError(getErrorMessage(reviewsResult.reason));
+                }
+
+                setLastUpdated(new Date());
+            } catch (refreshError) {
+                setError(getErrorMessage(refreshError));
+            } finally {
+                setLoading(false);
+                setRefreshing(false);
+                setReviewLoading(false);
+            }
+        },
+        [],
+    );
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            void refreshWorkspace(true);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [refreshWorkspace]);
+
+    useEffect(() => {
+        if (!settings.autoRefresh) return;
+
+        const interval = Math.max(
+            5,
+            Number(settings.refreshInterval) || 30,
+        );
+
+        const timer = window.setInterval(() => {
+            void refreshWorkspace(false);
+        }, interval * 1000);
+
+        return () => window.clearInterval(timer);
+    }, [
+        settings.autoRefresh,
+        settings.refreshInterval,
+        refreshWorkspace,
     ]);
 
-    if (jobResult.status === "fulfilled") {
-      setJobs(jobResult.value.items);
-      setTotalJobs(jobResult.value.total);
-      setError(null);
-    } else {
-      setError(
-        getErrorMessage(
-          jobResult.reason,
-          "Unable to load ingestion jobs.",
-        ),
-      );
-    }
-
-    if (reviewResult.status === "fulfilled") {
-      setPendingReviews(reviewResult.value.items);
-      setReviewError(null);
-    } else {
-      setReviewError(
-        getErrorMessage(
-          reviewResult.reason,
-          "Unable to load pending reviews.",
-        ),
-      );
-    }
-
-    setLoading(false);
-    setReviewLoading(false);
-  }, []);
-
-  useEffect(() => {
-    const initialLoad = window.setTimeout(() => {
-      void loadDashboard();
-    }, 0);
-
-    const timer = window.setInterval(() => {
-      void loadDashboard();
-    }, REFRESH_MS);
-
-    return () => {
-      window.clearTimeout(initialLoad);
-      window.clearInterval(timer);
-    };
-  }, [loadDashboard]);
-
-  const handleDecision = async (
-    reviewId: number,
-    decision: "accepted" | "rejected",
-  ) => {
-    setBusyReviewId(reviewId);
-    setReviewError(null);
-
-    try {
-      await updateReview(reviewId, { decision });
-      setPendingReviews((current) =>
-        current.filter((review) => review.id !== reviewId),
-      );
-    } catch (decisionError) {
-      setReviewError(
-        getErrorMessage(decisionError, "Unable to update review."),
-      );
-    } finally {
-      setBusyReviewId(null);
-    }
-  };
-
-  const openAnalysis = (jobId: number) => {
-    setSelectedJobId(jobId);
-  };
-
-  const latestJob = jobs[0] ?? null;
-
-  const projectMap = new Map<string, IngestionJobSummary[]>();
-  for (const job of jobs) {
-    const source = job.source_id || "Unassigned source";
-    const existing = projectMap.get(source) ?? [];
-    existing.push(job);
-    projectMap.set(source, existing);
-  }
-  const projects = Array.from(projectMap.entries());
-
-  const page = pageTitles[activeSection];
-
-  if (activeSection === "sonar-analysis" && selectedJobId !== null) {
-    return (
-      <div className="dashboard dashboard--analysis">
-        <JobDetail
-          jobId={selectedJobId}
-          onClose={() => setSelectedJobId(null)}
-        />
-      </div>
+    const completedJobs = useMemo(
+        () =>
+            jobs.filter((job) =>
+                [
+                    "completed",
+                    "complete",
+                    "success",
+                    "succeeded",
+                ].includes((job.status ?? "").toLowerCase()),
+            ).length,
+        [jobs],
     );
-  }
 
-  return (
-    <div className={`dashboard dashboard--${activeSection}`}>
-      <header className="workspace-page-heading">
-        <div>
-          <span className="panel-eyebrow">{page.eyebrow}</span>
-          <h1>{page.title}</h1>
-          <p>{page.description}</p>
+    const projectGroups = useMemo(() => {
+        const groups = new Map<string, IngestionJobSummary[]>();
+
+        for (const job of jobs) {
+            const key = job.source_id
+                ? String(job.source_id)
+                : "unassigned";
+
+            const existing = groups.get(key) ?? [];
+            existing.push(job);
+            groups.set(key, existing);
+        }
+
+        return Array.from(groups.entries()).map(
+            ([sourceId, sourceJobs]) => ({
+                sourceId,
+                jobs: sourceJobs,
+                latest: sourceJobs[0],
+            }),
+        );
+    }, [jobs]);
+
+    const openAnalysis = useCallback((jobId: number) => {
+        setSelectedJobId(jobId);
+    }, []);
+
+    const handleReviewDecision = useCallback(
+        async (reviewId: number, decision: ReviewDecision) => {
+            setBusyReviewId(reviewId);
+            setReviewError(null);
+
+            try {
+                await updateReview(reviewId, { decision });
+
+                setReviews((current) =>
+                    current.filter((review) => review.id !== reviewId),
+                );
+
+                setTotalReviews((current) =>
+                    Math.max(0, current - 1),
+                );
+            } catch (decisionError) {
+                setReviewError(getErrorMessage(decisionError));
+            } finally {
+                setBusyReviewId(null);
+            }
+        },
+        [],
+    );
+
+    const renderJobTable = (
+        tableJobs: IngestionJobSummary[],
+    ) => (
+        <div className="dashboard-table-wrapper">
+            <table className="dashboard-table">
+                <thead>
+                    <tr>
+                        <th>Job</th>
+                        <th>Status</th>
+                        <th>Source</th>
+                        <th>Frames</th>
+                        <th>Detections</th>
+                        <th>Model</th>
+                        <th>Created</th>
+                        <th aria-label="Actions" />
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {tableJobs.map((job) => (
+                        <tr
+                            key={job.id}
+                            className="dashboard-table__clickable"
+                            onClick={() => openAnalysis(job.id)}
+                        >
+                            <td>
+                                <span className="dashboard-table__job-id">
+                                    #{job.id}
+                                </span>
+                            </td>
+
+                            <td>
+                                <StatusBadge status={job.status} />
+                            </td>
+
+                            <td>{job.source_id ?? "—"}</td>
+
+                            <td>
+                                {formatMetric(
+                                    job.processed_frame_count ??
+                                    job.frame_count,
+                                )}
+                            </td>
+
+                            <td>{formatMetric(job.detection_count)}</td>
+
+                            <td>
+                                {job.model_name ||
+                                    job.model_version ||
+                                    "—"}
+                            </td>
+
+                            <td>{formatDate(job.created_at)}</td>
+
+                            <td>
+                                <button
+                                    type="button"
+                                    className="table-action"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        openAnalysis(job.id);
+                                    }}
+                                >
+                                    Open
+                                    <span aria-hidden="true">↗</span>
+                                </button>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
+    );
 
-        <div className="workspace-page-heading__actions">
-          <span className="workspace-live-status">
-            <span className="workspace-live-status__dot" />
-            API workspace
-          </span>
-          <button
-            type="button"
-            className="refresh-button"
-            onClick={() => void loadDashboard()}
-          >
-            <RefreshCw size={15} aria-hidden="true" />
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      {error && (
-        <div className="dashboard-error" role="alert">
-          <strong>Ingestion jobs unavailable</strong>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {activeSection === "overview" && (
+    const renderOverview = () => (
         <>
-          <section
-            className="dashboard-summary"
-            aria-label="Workspace summary"
-          >
-            <article className="summary-card summary-card--cyan">
-              <span className="summary-card__label">Total jobs</span>
-              <strong>{loading ? "..." : totalJobs}</strong>
-              <span className="summary-card__footnote">
-                Recorded ingestion jobs
-              </span>
-            </article>
+            <SectionHeading
+                eyebrow={activeSectionLabel}
+                title="Sonar operations at a glance"
+                description="Monitor ingestion, inspect detections, and review acoustic evidence."
+                action={
+                    <div className="dashboard-overview-actions">
+                        {lastUpdated && (
+                            <span className="dashboard-last-updated">
+                                Updated{" "}
+                                {lastUpdated.toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                })}
+                            </span>
+                        )}
 
-            <article className="summary-card summary-card--blue">
-              <span className="summary-card__label">Jobs loaded</span>
-              <strong>{loading ? "..." : jobs.length}</strong>
-              <span className="summary-card__footnote">
-                Latest page · up to 25
-              </span>
-            </article>
+                        <button
+                            type="button"
+                            className="button button--secondary"
+                            onClick={() => void refreshWorkspace(false)}
+                            disabled={refreshing}
+                        >
+                            <RefreshCw
+                                size={15}
+                                className={refreshing ? "spin" : ""}
+                            />
+                            {refreshing ? "Refreshing…" : "Refresh"}
+                        </button>
+                    </div>
+                }
+            />
 
-            <article className="summary-card summary-card--amber">
-              <span className="summary-card__label">Review pending</span>
-              <strong>{reviewLoading ? "..." : pendingReviews.length}</strong>
-              <span className="summary-card__footnote">
-                Loaded review records
-              </span>
-            </article>
+            <div className="dashboard-metrics">
+                <MetricCard
+                    label="Total jobs"
+                    value={formatMetric(totalJobs)}
+                    description="Ingestion jobs recorded"
+                />
 
-            <article className="summary-card summary-card--green">
-              <span className="summary-card__label">Latest status</span>
-              <strong className="summary-status">
-                {latestJob?.status ?? (loading ? "..." : "N/A")}
-              </strong>
-              <span className="summary-card__footnote">
-                {latestJob ? `Job #${latestJob.id}` : "No job available"}
-              </span>
-            </article>
-          </section>
+                <MetricCard
+                    label="Jobs loaded"
+                    value={formatMetric(jobs.length)}
+                    description={`Showing up to ${PAGE_SIZE} recent jobs`}
+                />
 
-          <section className="dashboard-panel">
-            <div className="panel-heading">
-              <div className="panel-heading__copy">
-                <span className="panel-eyebrow">DATA INGESTION</span>
-                <h2>Upload sonar data</h2>
-                <p>
-                  Submit survey imagery through the existing ingestion
-                  workflow.
-                </p>
-              </div>
-            </div>
-            <UploadPanel onCreated={() => void loadDashboard()} />
-          </section>
+                <MetricCard
+                    label="Pending reviews"
+                    value={formatMetric(totalReviews)}
+                    description="Detections awaiting human review"
+                    accent="amber"
+                />
 
-          <section className="dashboard-panel">
-            <div className="panel-heading">
-              <div className="panel-heading__copy">
-                <span className="panel-eyebrow">RECENT ACTIVITY</span>
-                <h2>Recent processing jobs</h2>
-                <p>
-                  Select a job to open its sonar analysis workspace.
-                </p>
-              </div>
-            </div>
+                <MetricCard
+                    label="Completed in view"
+            value={formatMetric(completedJobs)}
+            description="Completed jobs in loaded results"
+            accent="green"
+        />
+    </div>
+
+    {/* Start ingestion comes first and occupies the full width. */}
+    <section className="dashboard-panel dashboard-panel--wide">
+        <SectionHeading
+            title="Start an ingestion"
+            description="Upload side-scan sonar imagery and initiate processing."
+        />
+
+        <UploadPanel
+            onCreated={(job) => {
+                void refreshWorkspace(false);
+                setSelectedJobId(job.id);
+            }}
+        />
+    </section>
+
+    {/* Recent jobs stay at the bottom of the Overview. */}
+    <section className="dashboard-panel dashboard-panel--wide">
+        <SectionHeading
+            title="Recent processing jobs"
+            description="Latest ingestion activity"
+            action={
+                <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => navigate("/jobs")}
+                >
+                    View all →
+                </button>
+            }
+        />
+
+        {jobs.length > 0 ? (
+            renderJobTable(jobs.slice(0, 5))
+        ) : (
+            <EmptyState
+                title="No jobs yet"
+                description="Upload sonar imagery to create your first ingestion job."
+            />
+        )}
+    </section>
+    </>
+);
+
+    const renderProjects = () => (
+        <>
+            <SectionHeading
+                eyebrow="Sources"
+                title="Projects"
+                description="Browse ingestion jobs grouped by source."
+            />
+
+            {projectGroups.length === 0 ? (
+                <EmptyState
+                    title="No source projects found"
+                    description="Projects appear here when ingestion jobs are available."
+                />
+            ) : (
+                <div className="project-grid">
+                    {projectGroups.map((group) => (
+                        <article
+                            className="project-card"
+                            key={group.sourceId}
+                        >
+                            <div className="project-card__top">
+                                <div className="project-card__icon">
+                                    <Waves size={20} />
+                                </div>
+
+                                <StatusBadge
+                                    status={group.latest?.status}
+                                />
+                            </div>
+
+                            <span className="dashboard-eyebrow">
+                                Source
+                            </span>
+
+                            <h3>
+                                {group.sourceId === "unassigned"
+                                    ? "Unassigned source"
+                                    : `Source ${group.sourceId}`}
+                            </h3>
+
+                            <p>
+                                {group.jobs.length} loaded{" "}
+                                {group.jobs.length === 1
+                                    ? "job"
+                                    : "jobs"}
+                            </p>
+
+                            <div className="project-card__footer">
+                                <span>
+                                    Latest: #{group.latest?.id ?? "—"}
+                                </span>
+
+                                {group.latest && (
+                                    <button
+                                        type="button"
+                                        className="text-button"
+                                        onClick={() =>
+                                            openAnalysis(group.latest!.id)
+                                        }
+                                    >
+                                        Open analysis →
+                                    </button>
+                                )}
+                            </div>
+                        </article>
+                    ))}
+                </div>
+            )}
+        </>
+    );
+
+    const renderSonarAnalysis = () => (
+        <>
+            <SectionHeading
+                eyebrow="Inspection workspace"
+                title="Sonar analysis"
+                description="Select an ingestion job to inspect frames, detections, and evidence."
+            />
+
+            {jobs.length > 0 ? (
+                <div className="analysis-job-grid">
+                    {jobs.map((job) => (
+                        <button
+                            type="button"
+                            className="analysis-job-card"
+                            key={job.id}
+                            onClick={() => openAnalysis(job.id)}
+                        >
+                            <div className="analysis-job-card__top">
+                                <span className="analysis-job-card__id">
+                                    Job #{job.id}
+                                </span>
+
+                                <StatusBadge status={job.status} />
+                            </div>
+
+                            <h3>
+                                {job.model_name || "Sonar inference"}
+                            </h3>
+
+                            <p>
+                                Source {job.source_id ?? "—"} ·{" "}
+                                {formatMetric(
+                                    job.processed_frame_count ??
+                                    job.frame_count,
+                                )}{" "}
+                                frames
+                            </p>
+
+                            <div className="analysis-job-card__footer">
+                                <span>
+                                    {formatMetric(job.detection_count)} detections
+                                </span>
+
+                                <span>Open workspace →</span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <EmptyState
+                    title="No analysis jobs available"
+            description="Create an ingestion job before opening the sonar analysis workspace."
+        />
+        )}
+        </>
+    );
+
+    const renderProcessingJobs = () => (
+        <>
+            <SectionHeading
+                eyebrow="Ingestion"
+                title="Processing jobs"
+                description="Review job status, frame counts, detections, and model information."
+            />
+
+            {jobs.length > 0 ? (
+                renderJobTable(jobs)
+            ) : (
+                <EmptyState
+                    title="No processing jobs"
+                    description="Your ingestion jobs will appear here."
+                />
+            )}
+        </>
+    );
+
+    const renderReviewQueue = () => (
+        <>
+            <SectionHeading
+                eyebrow="Human in the loop"
+                title="Review queue"
+                description="Inspect model detections and record human decisions."
+            />
+
+            {reviewError && (
+                <div className="dashboard-alert dashboard-alert--error">
+                    <div>
+                        <strong>Review queue error</strong>
+                        <p>{reviewError}</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => void refreshWorkspace(false)}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
+
+            {reviewLoading ? (
+                <div className="dashboard-loading">
+                    <span className="dashboard-spinner" />
+                    Loading review queue…
+                </div>
+            ) : reviews.length > 0 ? (
+                <div className="review-grid">
+                    {reviews.map((review) => (
+                        <ReviewCard
+                            key={review.id}
+                            review={review}
+                            compact={settings.compactReviewCards}
+                            saving={busyReviewId === review.id}
+                            onDecision={handleReviewDecision}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <EmptyState
+            title="Review queue is clear"
+            description="No pending detections were returned by the review queue."
+        />
+        )}
+        </>
+    );
+
+    const renderReports = () => (
+        <>
+            <SectionHeading
+                eyebrow="Reporting"
+                title="Job reports"
+                description="Open a job to inspect its report and available export actions."
+            />
+
+            {jobs.length > 0 ? (
+                <div className="report-list">
+                    {jobs.map((job) => (
+                        <div className="report-row" key={job.id}>
+                            <div className="report-row__identity">
+                                <span className="report-row__icon">
+                                    <Waves size={18} />
+                                </span>
+
+                                <div>
+                                    <strong>Job #{job.id}</strong>
+
+                                    <span>
+                                        {formatDate(job.created_at)} · Source{" "}
+                                        {job.source_id ?? "—"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <StatusBadge status={job.status} />
+
+                            <button
+                                type="button"
+                                className="button button--secondary button--small"
+                                onClick={() => openAnalysis(job.id)}
+                            >
+                                Open report
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <EmptyState
+            title="No reports available"
+            description="Reports are associated with ingestion jobs."
+        />
+        )}
+        </>
+    );
+
+    const renderSettings = () => (
+        <>
+            <SectionHeading
+                eyebrow="Preferences"
+                title="Workspace settings"
+                description="Configure refresh behavior, detection display, and review defaults."
+            />
+
+            <section className="dashboard-panel dashboard-settings-panel">
+                <SettingsPanel
+                    settings={settings}
+                    updateSettings={updateSettings}
+                    resetSettings={resetSettings}
+                />
+            </section>
+        </>
+    );
+
+    const renderSection = () => {
+        switch (activeSection) {
+            case "projects":
+                return renderProjects();
+
+            case "sonar-analysis":
+                return renderSonarAnalysis();
+
+            case "processing-jobs":
+                return renderProcessingJobs();
+
+            case "review-queue":
+                return renderReviewQueue();
+
+            case "reports":
+                return renderReports();
+
+            case "settings":
+                return renderSettings();
+
+            case "overview":
+            default:
+                return renderOverview();
+        }
+    };
+
+    if (selectedJobId !== null) {
+        return (
+            <JobDetail
+                jobId={selectedJobId}
+                onClose={() => setSelectedJobId(null)}
+            />
+        );
+    }
+
+    return (
+        <div className="dashboard">
+            {error && (
+                <div className="dashboard-alert dashboard-alert--error">
+                    <div>
+                        <strong>Unable to load ingestion jobs</strong>
+                        <p>{error}</p>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => void refreshWorkspace(false)}
+                    >
+                        Retry
+                    </button>
+                </div>
+            )}
 
             {loading ? (
-              <div className="workspace-empty">Loading recorded jobs…</div>
-            ) : jobs.length === 0 ? (
-              <div className="workspace-empty">
-                No jobs are recorded yet. Upload sonar imagery to begin.
-              </div>
+                <div className="dashboard-loading dashboard-loading--page">
+                    <span className="dashboard-spinner" />
+                    Loading workspace…
+                </div>
             ) : (
-              <div className="workspace-job-list">
-                {jobs.slice(0, 5).map((job) => (
-                  <button
-                    type="button"
-                    className="workspace-job-item"
-                    key={job.id}
-                    onClick={() => openAnalysis(job.id)}
-                  >
-                    <span className="workspace-job-item__identity">
-                      <strong>Job #{job.id}</strong>
-                      <small>
-                        {job.source_id} · {job.model_name}
-                      </small>
-                    </span>
-                    <span
-                      className={`status-pill ${statusClass(job.status)}`}
-                    >
-                      <span className="status-pill__dot" />
-                      {job.status}
-                    </span>
-                    <span
-                      className="workspace-job-item__arrow"
-                      aria-hidden="true"
-                    >
-                      →
-                    </span>
-                  </button>
-                ))}
-              </div>
+                <div className="dashboard-page-content">
+                    {renderSection()}
+                </div>
             )}
-          </section>
-        </>
-      )}
-
-      {activeSection === "projects" && (
-        <section className="dashboard-panel">
-          <div className="panel-heading">
-            <div className="panel-heading__copy">
-              <span className="panel-eyebrow">SURVEY SOURCES</span>
-              <h2>Available projects</h2>
-              <p>
-                Project groups are derived from source IDs in the currently
-                loaded job records.
-              </p>
-            </div>
-            <span className="review-count">{projects.length} sources</span>
-          </div>
-
-          {loading ? (
-            <div className="workspace-empty">Loading project sources…</div>
-          ) : projects.length === 0 ? (
-            <div className="workspace-empty">
-              No project sources are available yet. Create an ingestion job
-              by uploading sonar data.
-            </div>
-          ) : (
-            <div className="workspace-project-grid">
-              {projects.map(([source, sourceJobs]) => {
-                const latestSourceJob = sourceJobs[0];
-
-                return (
-                  <article
-                    className="workspace-project-card"
-                    key={source}
-                  >
-                    <div className="workspace-project-card__top">
-                      <span className="workspace-project-card__icon">
-                        <Waves size={19} aria-hidden="true" />
-                      </span>
-                      <span className="workspace-project-card__count">
-                        {sourceJobs.length}{" "}
-                        {sourceJobs.length === 1 ? "job" : "jobs"}
-                      </span>
-                    </div>
-
-                    <h3>{source}</h3>
-                    <p>
-                      Survey source represented in recorded ingestion jobs.
-                    </p>
-
-                    <div className="workspace-project-card__meta">
-                      <span>Latest job</span>
-                      <strong>#{latestSourceJob?.id ?? "N/A"}</strong>
-                    </div>
-
-                    {latestSourceJob && (
-                      <button
-                        type="button"
-                        className="workspace-text-button"
-                        onClick={() => openAnalysis(latestSourceJob.id)}
-                      >
-                        Open latest analysis <span aria-hidden="true">→</span>
-                      </button>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {activeSection === "sonar-analysis" && (
-        <section className="dashboard-panel">
-          <div className="panel-heading">
-            <div className="panel-heading__copy">
-              <span className="panel-eyebrow">ANALYSIS WORKSPACE</span>
-              <h2>Select a processing job</h2>
-              <p>
-                Choose a recorded job to open the frame viewer and detection
-                inspector.
-              </p>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="workspace-empty">Loading available jobs…</div>
-          ) : jobs.length === 0 ? (
-            <div className="workspace-empty">
-              No processing jobs are available for analysis.
-            </div>
-          ) : (
-            <div className="workspace-job-list">
-              {jobs.map((job) => (
-                <button
-                  type="button"
-                  className="workspace-job-item"
-                  key={job.id}
-                  onClick={() => openAnalysis(job.id)}
-                >
-                  <span className="workspace-job-item__identity">
-                    <strong>
-                      Job #{job.id}{" "}
-                      <span className="workspace-job-item__source">
-                        {job.source_id}
-                      </span>
-                    </strong>
-                    <small>
-                      {job.frame_count} frames · {job.detection_count}{" "}
-                      detections · {job.model_name}
-                    </small>
-                  </span>
-                  <span
-                    className={`status-pill ${statusClass(job.status)}`}
-                  >
-                    <span className="status-pill__dot" />
-                    {job.status}
-                  </span>
-                  <span className="workspace-job-item__arrow">
-                    Open →
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {activeSection === "processing-jobs" && (
-        <section className="dashboard-panel">
-          <div className="panel-heading">
-            <div className="panel-heading__copy">
-              <span className="panel-eyebrow">PIPELINE MONITOR</span>
-              <h2>Processing jobs</h2>
-              <p>
-                Choose a row to inspect its processing details and sonar
-                output.
-              </p>
-            </div>
-            <span className="review-count">{totalJobs} total jobs</span>
-          </div>
-
-          <div className="jobs-table-wrap">
-            <table className="jobs-table">
-              <thead>
-                <tr>
-                  <th scope="col">ID</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Source</th>
-                  <th scope="col">Frames</th>
-                  <th scope="col">Detections</th>
-                  <th scope="col">Model</th>
-                  <th scope="col">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={7} className="table-empty">
-                      Loading ingestion jobs…
-                    </td>
-                  </tr>
-                ) : jobs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="table-empty">
-                      No ingestion jobs recorded.
-                    </td>
-                  </tr>
-                ) : (
-                  jobs.map((job) => (
-                    <tr
-                      key={job.id}
-                      className="job-row-clickable"
-                      tabIndex={0}
-                      aria-label={`Open ingestion job ${job.id}`}
-                      onClick={() => openAnalysis(job.id)}
-                      onKeyDown={(event) => {
-                        if (
-                          event.key === "Enter" ||
-                          event.key === " "
-                        ) {
-                          event.preventDefault();
-                          openAnalysis(job.id);
-                        }
-                      }}
-                    >
-                      <td className="job-id-cell">#{job.id}</td>
-                      <td>
-                        <span
-                          className={`status-pill ${statusClass(job.status)}`}
-                        >
-                          <span className="status-pill__dot" />
-                          {job.status}
-                        </span>
-                      </td>
-                      <td className="job-source-cell">{job.source_id}</td>
-                      <td className="numeric-cell">{job.frame_count}</td>
-                      <td className="numeric-cell">
-                        {job.detection_count}
-                      </td>
-                      <td className="job-model-cell">{job.model_name}</td>
-                      <td className="job-date-cell">
-                        {formatDate(job.created_at)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="panel-footer">
-            <span>
-              Showing {jobs.length} of {totalJobs} recorded jobs
-            </span>
-            <span className="panel-footer__hint">
-              The current API request loads up to 25 jobs.
-            </span>
-          </div>
-        </section>
-      )}
-
-      {activeSection === "review-queue" && (
-        <section className="dashboard-panel">
-          <div className="panel-heading">
-            <div className="panel-heading__copy">
-              <span className="panel-eyebrow">HUMAN-IN-THE-LOOP</span>
-              <h2>Pending detections</h2>
-              <p>
-                Review the available evidence and record a decision for each
-                item.
-              </p>
-            </div>
-            <span className="review-count">
-              <span className="review-count__dot" />
-              {reviewLoading
-                ? "Loading…"
-                : `${pendingReviews.length} pending`}
-            </span>
-          </div>
-
-          {reviewError && (
-            <div className="review-error" role="alert">
-              <strong>Review queue unavailable</strong>
-              <span>{reviewError}</span>
-            </div>
-          )}
-
-          {reviewLoading ? (
-            <div className="review-empty" aria-live="polite">
-              <span className="review-empty__mark review-empty__mark--loading">
-                ◌
-              </span>
-              <strong>Loading pending reviews</strong>
-              <span>Retrieving available review records…</span>
-            </div>
-          ) : pendingReviews.length === 0 ? (
-            <div className="review-empty">
-              <span className="review-empty__mark">✓</span>
-              <strong>No pending detections</strong>
-              <span>
-                {reviewError
-                  ? "The review request failed. Use Refresh to try again."
-                  : "There are currently no loaded detections requiring review."}
-              </span>
-            </div>
-          ) : (
-            <div className="review-list">
-              {pendingReviews.map((review) => (
-                <ReviewCard
-                  key={review.id}
-                  review={review}
-                  busy={busyReviewId === review.id}
-                  onDecision={handleDecision}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {activeSection === "reports" && (
-        <section className="dashboard-panel">
-          <div className="panel-heading">
-            <div className="panel-heading__copy">
-              <span className="panel-eyebrow">JOB REPORTS</span>
-              <h2>Available reports</h2>
-              <p>
-                Open a job to view its report using the existing report
-                endpoint and supported export controls.
-              </p>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="workspace-empty">Loading report sources…</div>
-          ) : jobs.length === 0 ? (
-            <div className="workspace-empty">
-              No job reports are available yet.
-            </div>
-          ) : (
-            <div className="workspace-job-list">
-              {jobs.map((job) => (
-                <button
-                  type="button"
-                  className="workspace-job-item"
-                  key={job.id}
-                  onClick={() => openAnalysis(job.id)}
-                >
-                  <span className="workspace-job-item__identity">
-                    <strong>Job #{job.id} report</strong>
-                    <small>
-                      {job.source_id} · {formatDate(job.created_at)}
-                    </small>
-                  </span>
-                  <span
-                    className={`status-pill ${statusClass(job.status)}`}
-                  >
-                    <span className="status-pill__dot" />
-                    {job.status}
-                  </span>
-                  <span className="workspace-job-item__arrow">
-                    View →
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {activeSection === "settings" && (
-        <section className="dashboard-panel workspace-settings">
-          <div className="panel-heading">
-            <div className="panel-heading__copy">
-              <span className="panel-eyebrow">WORKSPACE DETAILS</span>
-              <h2>Application information</h2>
-              <p>Current capabilities exposed by this frontend.</p>
-            </div>
-          </div>
-
-          <div className="workspace-settings__rows">
-            <div>
-              <span>Workspace</span>
-              <strong>DeepSight · Marine Intelligence</strong>
-            </div>
-            <div>
-              <span>Data source</span>
-              <strong>Connected application API</strong>
-            </div>
-            <div>
-              <span>Job refresh interval</span>
-              <strong>5 seconds</strong>
-            </div>
-            <div>
-              <span>Loaded job page size</span>
-              <strong>Up to 25 records</strong>
-            </div>
-            <div>
-              <span>Review workflow</span>
-              <strong>Human accept / reject</strong>
-            </div>
-          </div>
-
-          <p className="workspace-settings__note">
-            These are informational details. Editable preferences are not
-            shown here because no settings persistence endpoint has been
-            established in the current frontend code.
-          </p>
-        </section>
-      )}
-    </div>
-  );
+        </div>
+    );
 }

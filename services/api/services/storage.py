@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 import boto3
+from botocore.config import Config as BotoConfig
 from botocore.exceptions import BotoCoreError, ClientError
 
 from services.api.config import settings
@@ -32,6 +33,7 @@ class StorageService:
         self.backend = backend
         self.bucket = settings.storage_bucket.strip()
         self.region = settings.storage_region.strip() or None
+        self.endpoint_url = settings.storage_endpoint_url.strip() or None
         self.prefix = settings.storage_prefix.strip("/")
 
         if self.backend == "s3":
@@ -40,7 +42,16 @@ class StorageService:
                     "STORAGE_BUCKET is required when STORAGE_BACKEND=s3."
                 )
 
-            self.client = boto3.client("s3", region_name=self.region)
+            self.client = boto3.client(
+                "s3",
+                region_name=self.region,
+                endpoint_url=self.endpoint_url,
+                config=(
+                    BotoConfig(s3={"addressing_style": "path"})
+                    if self.endpoint_url
+                    else None
+                ),
+            )
         else:
             self.client = None
 
